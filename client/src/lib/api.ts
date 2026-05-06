@@ -1,3 +1,5 @@
+import type { Integration } from "@shared/schema";
+
 export const api = {
   walletConnect: (wallet: string, workspaceName?: string) =>
     fetch("/api/wallet/connect", {
@@ -9,6 +11,9 @@ export const api = {
   systemHealth: () => fetch("/api/system/health").then((r) => r.json()),
 
   contractStatus: () => fetch("/api/contracts/status").then((r) => r.json()),
+
+  deployContract: (): Promise<{ address?: string; txHash?: string; explorerUrl?: string; txUrl?: string; chain?: string; error?: string }> =>
+    fetch("/api/contracts/deploy", { method: "POST" }).then((r) => r.json()),
 
   dashboardStats: (workspaceId: string) =>
     fetch(`/api/dashboard/stats/${workspaceId}`).then((r) => r.json()),
@@ -43,6 +48,8 @@ export const api = {
     name: string;
     role: string;
     initialMemorySize?: number;
+    source?: "manual" | "marketplace";
+    marketplaceId?: string;
   }) =>
     fetch("/api/agents", {
       method: "POST",
@@ -73,6 +80,29 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     }).then((r) => r.json()),
+
+  // Integrations
+  listIntegrations: (workspaceId: string): Promise<{ integrations: Integration[] }> =>
+    fetch(`/api/integrations?workspaceId=${workspaceId}`).then((r) => r.json()),
+
+  connectIntegration: (input: {
+    workspaceId: string;
+    type: string;
+    name: string;
+    category: string;
+    config: Record<string, string>;
+  }): Promise<{ integration: Integration; testResult: { ok: boolean; message: string } }> =>
+    fetch("/api/integrations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }).then((r) => r.json()),
+
+  testIntegration: (id: string): Promise<{ integration: Integration; testResult: { ok: boolean; message: string } }> =>
+    fetch(`/api/integrations/${id}/test`, { method: "POST" }).then((r) => r.json()),
+
+  disconnectIntegration: (id: string): Promise<{ ok: boolean }> =>
+    fetch(`/api/integrations/${id}`, { method: "DELETE" }).then((r) => r.json()),
 };
 
 export const useWorkspaceId = (): string | null =>

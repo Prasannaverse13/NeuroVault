@@ -94,11 +94,34 @@ export const orchestratorRequestSchema = z.object({
 });
 export type OrchestratorRequest = z.infer<typeof orchestratorRequestSchema>;
 
+export const AGENT_ROLES = [
+  "devops", "support", "finance", "memory", "privacy",
+  "analytics", "sales", "security", "knowledge", "custom",
+] as const;
+export type AgentRole = typeof AGENT_ROLES[number];
+
 export const createAgentRequestSchema = z.object({
   workspaceId: z.string(),
   ownerWallet: z.string(),
   name: z.string().min(1),
-  role: z.enum(["devops", "support", "finance", "memory", "privacy"]),
+  role: z.enum(AGENT_ROLES),
   initialMemorySize: z.number().int().nonnegative().optional(),
+  source: z.enum(["manual", "marketplace"]).optional(),
+  marketplaceId: z.string().optional(),
 });
 export type CreateAgentRequest = z.infer<typeof createAgentRequestSchema>;
+
+// Integration types
+export interface Integration {
+  id: string;
+  workspaceId: string;
+  type: string;
+  name: string;
+  category: string;
+  config: Record<string, string>;
+  status: "connected" | "error" | "pending";
+  statusMessage: string | null;
+  testedAt: Date | null;
+  createdAt: Date;
+}
+export type InsertIntegration = Omit<Integration, "id" | "createdAt">;

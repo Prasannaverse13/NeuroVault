@@ -10,10 +10,12 @@ import type {
   InsertAuditLog,
   ContractMeta,
   InsertContractMeta,
+  Integration,
+  InsertIntegration,
 } from "@shared/schema";
 
 export interface IStorage {
-  // Workspaces (wallet identity)
+  // Workspaces
   getOrCreateWorkspaceByWallet(wallet: string, name?: string): Promise<Workspace>;
   getWorkspace(id: string): Promise<Workspace | undefined>;
   getWorkspaceByWallet(wallet: string): Promise<Workspace | undefined>;
@@ -39,6 +41,14 @@ export interface IStorage {
   // Contract registry
   upsertContractMeta(input: InsertContractMeta): Promise<ContractMeta>;
   getContractMeta(name: string): Promise<ContractMeta | undefined>;
+
+  // Integrations
+  createIntegration(input: InsertIntegration): Promise<Integration>;
+  getIntegration(id: string): Promise<Integration | undefined>;
+  listIntegrations(workspaceId: string): Promise<Integration[]>;
+  updateIntegration(id: string, updates: Partial<Pick<Integration, "status" | "statusMessage" | "testedAt" | "config">>): Promise<Integration | undefined>;
+  deleteIntegration(id: string): Promise<void>;
+  getIntegrationByType(workspaceId: string, type: string): Promise<Integration | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -47,6 +57,7 @@ export class MemStorage implements IStorage {
   private memories = new Map<string, Memory>();
   private audits: AuditLog[] = [];
   private contracts = new Map<string, ContractMeta>();
+  private integrations = new Map<string, Integration>();
 
   async getOrCreateWorkspaceByWallet(wallet: string, name?: string): Promise<Workspace> {
     const existing = await this.getWorkspaceByWallet(wallet);
@@ -61,18 +72,14 @@ export class MemStorage implements IStorage {
     return ws;
   }
 
-  async getWorkspace(id: string) {
-    return this.workspaces.get(id);
-  }
+  async getWorkspace(id: string) { return this.workspaces.get(id); }
 
   async getWorkspaceByWallet(wallet: string) {
     const lower = wallet.toLowerCase();
     return Array.from(this.workspaces.values()).find((w) => w.ownerWallet === lower);
   }
 
-  async listWorkspaces() {
-    return Array.from(this.workspaces.values());
-  }
+  async listWorkspaces() { return Array.from(this.workspaces.values()); }
 
   async createAgent(input: InsertAgent): Promise<Agent> {
     const agent: Agent = {
@@ -92,9 +99,7 @@ export class MemStorage implements IStorage {
     return agent;
   }
 
-  async getAgent(id: string) {
-    return this.agents.get(id);
-  }
+  async getAgent(id: string) { return this.agents.get(id); }
 
   async listAgents(workspaceId: string) {
     return Array.from(this.agents.values()).filter((a) => a.workspaceId === workspaceId);
@@ -131,9 +136,7 @@ export class MemStorage implements IStorage {
     return memory;
   }
 
-  async getMemory(id: string) {
-    return this.memories.get(id);
-  }
+  async getMemory(id: string) { return this.memories.get(id); }
 
   async listWorkspaceMemories(workspaceId: string) {
     return Array.from(this.memories.values())
@@ -184,8 +187,47 @@ export class MemStorage implements IStorage {
     return entry;
   }
 
-  async getContractMeta(name: string) {
-    return this.contracts.get(name);
+  async getContractMeta(name: string) { return this.contracts.get(name); }
+
+  async createIntegration(input: InsertIntegration): Promise<Integration> {
+    const integration: Integration = {
+      id: randomUUID(),
+      workspaceId: input.workspaceId,
+      type: input.type,
+      name: input.name,
+      category: input.category,
+      config: input.config ?? {},
+      status: input.status ?? "pending",
+      statusMessage: input.statusMessage ?? null,
+      testedAt: input.testedAt ?? null,
+      createdAt: new Date(),
+    };
+    this.integrations.set(integration.id, integration);
+    return integration;
+  }
+
+  async getIntegration(id: string) { return this.integrations.get(id); }
+
+  async listIntegrations(workspaceId: string) {
+    return Array.from(this.integrations.values())
+      .filter((i) => i.workspaceId === workspaceId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updateIntegration(id: string, updates: Partial<Pick<Integration, "status" | "statusMessage" | "testedAt" | "config">>) {
+    const i = this.integrations.get(id);
+    if (!i) return undefined;
+    const updated = { ...i, ...updates };
+    this.integrations.set(id, updated);
+    return updated;
+  }
+
+  async deleteIntegration(id: string) { this.integrations.delete(id); }
+
+  async getIntegrationByType(workspaceId: string, type: string) {
+    return Array.from(this.integrations.values()).find(
+      (i) => i.workspaceId === workspaceId && i.type === type && i.status === "connected",
+    );
   }
 }
 

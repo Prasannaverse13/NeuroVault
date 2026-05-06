@@ -42,6 +42,138 @@ const walletConnectSchema = z.object({
   workspaceName: z.string().optional(),
 });
 
+// ── Integration connection tester ──────────────────────────────────────────
+const testIntegrationConnection = async (
+  type: string,
+  config: Record<string, string>,
+): Promise<{ ok: boolean; message: string }> => {
+  try {
+    if (type === "slack" && config.webhook_url) {
+      const r = await fetch(config.webhook_url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: "✅ NeuroVault integration connected successfully." }),
+      });
+      return r.ok
+        ? { ok: true, message: "Webhook test message sent to Slack" }
+        : { ok: false, message: `Slack webhook returned ${r.status}` };
+    }
+
+    if (type === "github" && config.access_token) {
+      const r = await fetch("https://api.github.com/user", {
+        headers: {
+          Authorization: `Bearer ${config.access_token}`,
+          "User-Agent": "NeuroVault-Enterprise/1.0",
+          Accept: "application/vnd.github+json",
+        },
+      });
+      if (r.ok) {
+        const data = (await r.json()) as any;
+        return { ok: true, message: `Connected as @${data.login} (${data.name ?? ""})`.trim() };
+      }
+      return { ok: false, message: `GitHub returned ${r.status} — check your token` };
+    }
+
+    if (type === "notion" && config.api_key) {
+      const r = await fetch("https://api.notion.com/v1/users/me", {
+        headers: {
+          Authorization: `Bearer ${config.api_key}`,
+          "Notion-Version": "2022-06-28",
+        },
+      });
+      if (r.ok) {
+        const data = (await r.json()) as any;
+        return { ok: true, message: `Connected as ${data.name ?? "Notion user"}` };
+      }
+      return { ok: false, message: `Notion returned ${r.status} — check your integration token` };
+    }
+
+    if (type === "linear" && config.api_key) {
+      const r = await fetch("https://api.linear.app/graphql", {
+        method: "POST",
+        headers: {
+          Authorization: config.api_key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: "{ viewer { name email } }" }),
+      });
+      if (r.ok) {
+        const data = (await r.json()) as any;
+        const name = data.data?.viewer?.name ?? "Linear user";
+        return { ok: true, message: `Connected as ${name}` };
+      }
+      return { ok: false, message: `Linear returned ${r.status} — check your API key` };
+    }
+
+    if (type === "openai" && config.api_key) {
+      const r = await fetch("https://api.openai.com/v1/models", {
+        headers: { Authorization: `Bearer ${config.api_key}` },
+      });
+      return r.ok
+        ? { ok: true, message: "OpenAI API key is valid" }
+        : { ok: false, message: `OpenAI returned ${r.status} — check your key` };
+    }
+
+    if (type === "hubspot" && config.api_key) {
+      const r = await fetch("https://api.hubapi.com/crm/v3/objects/contacts?limit=1", {
+        headers: { Authorization: `Bearer ${config.api_key}` },
+      });
+      return r.ok
+        ? { ok: true, message: "HubSpot connection verified" }
+        : { ok: false, message: `HubSpot returned ${r.status} — check your access token` };
+    }
+
+    if (type === "stripe" && config.secret_key) {
+      const r = await fetch("https://api.stripe.com/v1/balance", {
+        headers: { Authorization: `Bearer ${config.secret_key}` },
+      });
+      return r.ok
+        ? { ok: true, message: "Stripe connection verified" }
+        : { ok: false, message: `Stripe returned ${r.status} — check your secret key` };
+    }
+
+    if (type === "airtable" && config.api_key) {
+      const r = await fetch("https://api.airtable.com/v0/meta/whoami", {
+        headers: { Authorization: `Bearer ${config.api_key}` },
+      });
+      if (r.ok) {
+        const data = (await r.json()) as any;
+        return { ok: true, message: `Connected as ${data.email ?? "Airtable user"}` };
+      }
+      return { ok: false, message: `Airtable returned ${r.status} — check your token` };
+    }
+
+    // For integrations without specific tests, verify required fields are present
+    const requiredFields = getRequiredFields(type);
+    const missingFields = requiredFields.filter((f) => !config[f]);
+    if (missingFields.length > 0) {
+      return { ok: false, message: `Missing required fields: ${missingFields.join(", ")}` };
+    }
+
+    return { ok: true, message: "Credentials saved and connection recorded" };
+  } catch (err: any) {
+    return { ok: false, message: err.message ?? "Connection test failed" };
+  }
+};
+
+const getRequiredFields = (type: string): string[] => {
+  const map: Record<string, string[]> = {
+    slack: ["webhook_url"],
+    github: ["access_token"],
+    notion: ["api_key"],
+    linear: ["api_key"],
+    hubspot: ["api_key"],
+    stripe: ["secret_key"],
+    zendesk: ["subdomain", "api_token"],
+    openai: ["api_key"],
+    salesforce: ["instance_url", "access_token"],
+    airtable: ["api_key"],
+    postgres: ["connection_string"],
+    snowflake: ["account", "username", "password"],
+  };
+  return map[type] ?? [];
+};
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
 
   // ── /api/wallet ────────────────────────────────────────────
@@ -81,12 +213,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const agents = await storage.listAgents(workspaceId);
     const memories = await storage.listWorkspaceMemories(workspaceId);
     const auditEntries = await storage.listAudit(workspaceId, 50);
+    const integrations = await storage.listIntegrations(workspaceId);
     const storeSt = storageStatus();
     const contractSt = await contractStatus();
     return {
       agentCount: agents.length,
       memoryCount: memories.length,
       auditCount: auditEntries.length,
+      integrationCount: integrations.filter((i) => i.status === "connected").length,
       storageBackend: storeSt.backend,
       contractConfigured: contractSt.configured,
       contractAddress: contractSt.address,
@@ -119,7 +253,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       action: "agent.create",
       targetType: "agent",
       targetId: agent.id,
-      metadata: { name: agent.name, role: agent.role },
+      metadata: { name: agent.name, role: agent.role, source: input.source ?? "manual", marketplaceId: input.marketplaceId ?? null },
     });
     return { agent };
   }));
@@ -157,11 +291,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     });
     const input = schema.parse(req.body);
 
-    // Privacy scan before processing
     const sanitized = await runPrivacyAgent({ text: input.payload, enforceRedaction: true });
     const cleanPayload = (sanitized.output as any).sanitizedText as string;
 
-    // Gemini-powered summarization + auto-tagging
     let summary = input.summary ?? input.payload.slice(0, 120);
     let tags = input.tags;
     let category = input.type;
@@ -250,15 +382,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     if (!ws) throw Object.assign(new Error("workspace_not_found"), { status: 404 });
 
     const allMemories = await storage.listWorkspaceMemories(workspaceId);
+    const integrations = await storage.listIntegrations(workspaceId);
+    const connectedIntegrations = integrations.filter((i) => i.status === "connected");
+
     const workflow = await orchestrate({
       workspaceId,
       query: message,
       memories: allMemories,
       usage: { apiCalls: history.length + 1, storageGb: allMemories.length * 0.001, vectorQueries: allMemories.length },
       chatHistory: history,
+      integrationContext: connectedIntegrations.length > 0
+        ? `Connected integrations: ${connectedIntegrations.map((i) => i.name).join(", ")}`
+        : undefined,
     });
 
-    // Store the conversation as a memory
     if (isGeminiConfigured()) {
       try {
         const agents = await storage.listAgents(workspaceId);
@@ -293,6 +430,95 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       routedTo: workflow.routedTo,
       latencyMs: workflow.totalLatencyMs,
       memoryCount: allMemories.length,
+    };
+  }));
+
+  // ── /api/integrations ──────────────────────────────────────
+  app.get("/api/integrations", handle(async (req) => {
+    const workspaceId = String(req.query.workspaceId ?? "");
+    if (!workspaceId) throw new Error("workspaceId query param required");
+    const integrations = await storage.listIntegrations(workspaceId);
+    return { integrations };
+  }));
+
+  app.post("/api/integrations", handle(async (req) => {
+    const schema = z.object({
+      workspaceId: z.string(),
+      type: z.string().min(1),
+      name: z.string().min(1),
+      category: z.string().min(1),
+      config: z.record(z.string()).default({}),
+    });
+    const input = schema.parse(req.body);
+
+    const ws = await storage.getWorkspace(input.workspaceId);
+    if (!ws) throw Object.assign(new Error("workspace_not_found"), { status: 404 });
+
+    // Remove any existing integration of this type for this workspace
+    const existing = await storage.getIntegrationByType(input.workspaceId, input.type);
+    if (existing) await storage.deleteIntegration(existing.id);
+
+    // Test the connection
+    const testResult = await testIntegrationConnection(input.type, input.config);
+
+    const integration = await storage.createIntegration({
+      workspaceId: input.workspaceId,
+      type: input.type,
+      name: input.name,
+      category: input.category,
+      config: input.config,
+      status: testResult.ok ? "connected" : "error",
+      statusMessage: testResult.message,
+      testedAt: new Date(),
+    });
+
+    await storage.appendAudit({
+      workspaceId: input.workspaceId,
+      actorWallet: ws.ownerWallet,
+      action: testResult.ok ? "integration.connect" : "integration.connect_failed",
+      targetType: "integration",
+      targetId: integration.id,
+      metadata: { type: input.type, name: input.name, testResult },
+    });
+
+    return { integration, testResult };
+  }));
+
+  app.post("/api/integrations/:id/test", handle(async (req) => {
+    const integration = await storage.getIntegration(req.params.id);
+    if (!integration) throw Object.assign(new Error("integration_not_found"), { status: 404 });
+
+    const testResult = await testIntegrationConnection(integration.type, integration.config);
+    const updated = await storage.updateIntegration(integration.id, {
+      status: testResult.ok ? "connected" : "error",
+      statusMessage: testResult.message,
+      testedAt: new Date(),
+    });
+
+    return { integration: updated, testResult };
+  }));
+
+  app.delete("/api/integrations/:id", handle(async (req) => {
+    const integration = await storage.getIntegration(req.params.id);
+    if (!integration) throw Object.assign(new Error("integration_not_found"), { status: 404 });
+    await storage.deleteIntegration(req.params.id);
+    return { ok: true };
+  }));
+
+  // Integration context for agents
+  app.get("/api/integrations/context/:workspaceId", handle(async (req) => {
+    const integrations = await storage.listIntegrations(req.params.workspaceId);
+    const connected = integrations.filter((i) => i.status === "connected");
+    return {
+      connected: connected.map((i) => ({
+        type: i.type,
+        name: i.name,
+        category: i.category,
+        testedAt: i.testedAt,
+        statusMessage: i.statusMessage,
+        // Never expose raw config/secrets to frontend
+      })),
+      count: connected.length,
     };
   }));
 
@@ -347,15 +573,94 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     return { onchain };
   }));
 
+  // Deploy AgentRegistry contract on-demand
+  app.post("/api/contracts/deploy", handle(async () => {
+    const pk = process.env.ZG_PRIVATE_KEY;
+    if (!pk) {
+      throw Object.assign(
+        new Error("ZG_PRIVATE_KEY env var not set. Add your funded 0G wallet private key as a secret."),
+        { status: 400 },
+      );
+    }
+    const { ethers } = await import("ethers");
+    const solc = (await import("solc")).default as any;
+    const { readFile, writeFile, mkdir } = await import("node:fs/promises");
+    const path = await import("node:path");
+
+    // Compile
+    const source = await readFile(path.resolve("contracts/AgentRegistry.sol"), "utf8");
+    const input = {
+      language: "Solidity",
+      sources: { "AgentRegistry.sol": { content: source } },
+      settings: {
+        optimizer: { enabled: true, runs: 200 },
+        outputSelection: { "*": { "*": ["abi", "evm.bytecode.object"] } },
+      },
+    };
+    const out = JSON.parse(solc.compile(JSON.stringify(input)));
+    if (out.errors?.some((e: any) => e.severity === "error")) {
+      throw new Error("Solidity compilation failed: " + JSON.stringify(out.errors));
+    }
+    const c = out.contracts["AgentRegistry.sol"]["AgentRegistry"];
+    const bytecode = "0x" + c.evm.bytecode.object;
+    const abi = c.abi;
+
+    const provider = new ethers.JsonRpcProvider(activeChain.rpcUrl);
+    const wallet = new ethers.Wallet(pk, provider);
+    const balance = await provider.getBalance(wallet.address);
+    if (balance === 0n) {
+      throw Object.assign(
+        new Error(`Wallet ${wallet.address} has 0 balance on ${activeChain.name}. Fund it from the faucet first.`),
+        { status: 402 },
+      );
+    }
+
+    const factory = new ethers.ContractFactory(abi, bytecode, wallet);
+    const contract = await factory.deploy();
+    const txHash = contract.deploymentTransaction()?.hash ?? "";
+    await contract.waitForDeployment();
+    const address = await contract.getAddress();
+    const explorerUrl = `${activeChain.explorer}/address/${address}`;
+    const txUrl = `${activeChain.explorer}/tx/${txHash}`;
+
+    // Persist deployment
+    await mkdir("contracts", { recursive: true });
+    const file = path.resolve("contracts/deployments.json");
+    let json: any = {};
+    try { json = JSON.parse(await readFile(file, "utf8")); } catch { /* new */ }
+    json[process.env.ZG_CHAIN || "0g-galileo"] = { AgentRegistry: address, txHash, explorerUrl, deployedAt: new Date().toISOString() };
+    await writeFile(file, JSON.stringify(json, null, 2));
+
+    await storage.upsertContractMeta({
+      name: "AgentRegistry",
+      address,
+      chainId: activeChain.chainId,
+      deployTxHash: txHash,
+      explorerUrl,
+    });
+
+    return { address, txHash, explorerUrl, txUrl, chain: activeChain.name };
+  }));
+
   // ── /api/system ────────────────────────────────────────────
-  app.get("/api/system/health", handle(async () => ({
-    storage: storageStatus(),
-    compute: computeStatus(),
-    contract: await contractStatus(),
-    chain: activeChain,
-    gemini: { configured: isGeminiConfigured() },
-    timestamp: new Date().toISOString(),
-  })));
+  app.get("/api/system/health", handle(async () => {
+    let deployWallet: string | null = null;
+    if (process.env.ZG_PRIVATE_KEY) {
+      try {
+        const { ethers } = await import("ethers");
+        deployWallet = new ethers.Wallet(process.env.ZG_PRIVATE_KEY).address;
+      } catch { /* ignore */ }
+    }
+    return {
+      storage: storageStatus(),
+      compute: computeStatus(),
+      contract: await contractStatus(),
+      chain: activeChain,
+      gemini: { configured: isGeminiConfigured() },
+      deployWallet,
+      timestamp: new Date().toISOString(),
+    };
+  }));
 
   return httpServer;
 }

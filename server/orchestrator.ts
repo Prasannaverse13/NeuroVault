@@ -23,6 +23,7 @@ export interface OrchestratorContext {
   usage: { apiCalls: number; storageGb: number; vectorQueries: number };
   agentRouting?: AgentName[];
   chatHistory?: ChatMessage[];
+  integrationContext?: string;
 }
 
 export interface OrchestratorWorkflow {
@@ -86,6 +87,10 @@ export const orchestrate = async (
     .map((s) => `[${s.agent.toUpperCase()}] ${s.summary}`)
     .join("\n");
 
+  const integrationLine = ctx.integrationContext
+    ? `\nActive integrations: ${ctx.integrationContext}`
+    : "";
+
   const systemInstruction = `You are NeuroVault Copilot, an enterprise AI assistant with deep memory context.
 You have access to the following workspace memories and agent analyses:
 
@@ -93,7 +98,7 @@ Memory context:
 ${contextSummaries.length > 0 ? contextSummaries.map((s, i) => `${i + 1}. ${s}`).join("\n") : "No prior memories."}
 
 Agent findings:
-${agentFindings}
+${agentFindings}${integrationLine}
 
 Be precise, professional, and actionable. Reference specific memory findings when relevant.`;
 
