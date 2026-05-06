@@ -1,0 +1,55 @@
+import type { Memory } from "@shared/schema";
+import { embed, cosine } from "../lib/embeddings";
+import { decrypt } from "../lib/encryption";
+import type { AgentResult } from "./index";
+
+export interface MemoryAgentInput {
+  query: string;
+  memories: Memory[];
+  topK?: number;
+}
+
+export interface RankedMemory {
+  memoryId: string;
+  agentId: string;
+  type: string;
+  summary: string;
+  score: number;
+  decryptedPreview?: string;
+}
+
+export const runMemoryAgent = async (
+  input: MemoryAgentInput,
+): Promise<AgentResult<RankedMemory[]>> => {
+  const start = Date.now();
+  const queryVec = embed(input.query);
+  const ranked: RankedMemory[] = input.memories
+    .map((m) => {
+      const score = m.embedding
+        ? cosine(queryVec, m.embedding as number[])
+        : cosine(queryVec, embed(m.summary));
+      let decryptedPreview: string | undefined;
+      try {
+        decryptedPreview = decrypt(m.encryptedPayload).slice(0, 240);
+      } catch {
+        decryptedPreview = undefined;
+      }
+      return {
+        memoryId: m.id,
+        agentId: m.agentId,
+        type: m.type,
+        summary: m.summary,
+        score: Number(score.toFixed(4)),
+        decryptedPreview,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, input.topK ?? 5);
+
+  return {
+    agent: "memory",
+    summary: `Retrieved ${ranked.length} relevant memories from ${input.memories.length} total.`,
+    output: ranked,
+    latencyMs: Date.now() - start,
+  };
+};

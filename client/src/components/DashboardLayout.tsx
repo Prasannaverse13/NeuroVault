@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useAccount } from "wagmi";
 
 const navGroups = [
   {
@@ -104,15 +106,7 @@ export const DashboardLayout = ({
           ))}
         </nav>
         <div className="border-t border-[#ffffff0d] p-4">
-          <div className="flex items-center gap-3 rounded-lg bg-[#ffffff08] p-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] text-xs">
-              AK
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm text-white">Aria Kepler</p>
-              <p className="truncate text-xs text-slate-500">Pro Workspace</p>
-            </div>
-          </div>
+          <WalletPill />
         </div>
       </aside>
 
@@ -153,8 +147,15 @@ export const DashboardLayout = ({
               className="border border-[#ffffff14] bg-[#ffffff08] text-[10px] tracking-[1px] text-white hover:bg-[#ffffff08]"
             >
               <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400" />
-              MAINNET
+              0G GALILEO
             </Badge>
+            <div className="hidden sm:block">
+              <ConnectButton
+                accountStatus="address"
+                chainStatus="icon"
+                showBalance={false}
+              />
+            </div>
           </div>
         </header>
 
@@ -176,6 +177,32 @@ export const DashboardLayout = ({
             {children}
           </div>
         </main>
+      </div>
+    </div>
+  );
+};
+
+const WalletPill = () => {
+  const { address, isConnected } = useAccount();
+  if (!isConnected || !address) {
+    return (
+      <div className="rounded-lg border border-violet-400/30 bg-[#8b5cf61a] p-3 text-center">
+        <ConnectButton label="Connect wallet" />
+      </div>
+    );
+  }
+  const short = `${address.slice(0, 6)}…${address.slice(-4)}`;
+  return (
+    <div
+      data-testid="wallet-pill"
+      className="flex items-center gap-3 rounded-lg bg-[#ffffff08] p-3"
+    >
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] text-xs">
+        {address.slice(2, 4).toUpperCase()}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-mono text-xs text-white">{short}</p>
+        <p className="truncate text-xs text-slate-500">0G workspace</p>
       </div>
     </div>
   );
