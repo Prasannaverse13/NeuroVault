@@ -1,35 +1,79 @@
-import { useState } from "react";
 import { DashboardLayout, DashboardCard, StatBlock } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, UserPlus } from "lucide-react";
+import { UserPlus, Loader2, ExternalLink } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { api, useWorkspaceId } from "@/lib/api";
+import { useAccount } from "wagmi";
 
-const members = [
-  { name: "Aria Kepler", email: "aria@neurovault.ai", role: "Owner", status: "Active", lastActive: "Now" },
-  { name: "Elias Vance", email: "elias@neurovault.ai", role: "Admin", status: "Active", lastActive: "12 min ago" },
-  { name: "Mira Solis", email: "mira@neurovault.ai", role: "Engineer", status: "Active", lastActive: "1h ago" },
-  { name: "Theo Park", email: "theo@neurovault.ai", role: "Engineer", status: "Active", lastActive: "3h ago" },
-  { name: "Nora Ito", email: "nora@neurovault.ai", role: "Analyst", status: "Invited", lastActive: "—" },
-  { name: "Ravi Shah", email: "ravi@partner.io", role: "Viewer", status: "Active", lastActive: "2d ago" },
-];
-
-const roles = ["Owner", "Admin", "Engineer", "Analyst", "Viewer"];
-
-const systemHealth = [
-  { name: "API gateway", status: "Operational", uptime: "99.99%" },
-  { name: "Memory clusters", status: "Operational", uptime: "99.97%" },
-  { name: "Inference layer", status: "Degraded", uptime: "99.21%" },
-  { name: "Marketplace", status: "Operational", uptime: "100%" },
-];
+const timeAgo = (d: string) => {
+  const diff = Date.now() - new Date(d).getTime();
+  if (diff < 60_000) return "just now";
+  if (diff < 3_600_000) return `${Math.round(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.round(diff / 3_600_000)}h ago`;
+  return `${Math.round(diff / 86_400_000)}d ago`;
+};
 
 export default function AdminPanelPage() {
-  const [filter, setFilter] = useState("All");
-  const visible = filter === "All" ? members : members.filter((m) => m.role === filter);
+  const workspaceId = useWorkspaceId();
+  const { address } = useAccount();
+
+  const { data: health, isLoading: healthLoading } = useQuery({
+    queryKey: ["/api/system/health"],
+    queryFn: () => api.systemHealth(),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ["/api/dashboard/stats", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: () => api.dashboardStats(workspaceId!),
+    staleTime: 30_000,
+  });
+
+  const { data: workspace } = useQuery({
+    queryKey: ["/api/workspaces", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: () => fetch(`/api/workspaces/${workspaceId}`).then((r) => r.json()),
+    staleTime: 60_000,
+  });
+
+  const { data: auditData } = useQuery({
+    queryKey: ["/api/workspaces", workspaceId, "audit"],
+    enabled: !!workspaceId,
+    queryFn: () => fetch(`/api/workspaces/${workspaceId}/audit`).then((r) => r.json()),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
+
+  const auditEntries = auditData?.entries ?? [];
+  const ws = workspace?.workspace;
+  const contract = health?.contract;
+
+  const systemServices = [
+    { name: "API gateway", status: "Operational", uptime: "99.99%" },
+    {
+      name: "Gemini AI (1.5 Pro)",
+      status: health?.gemini?.configured ? "Operational" : "Not configured",
+      uptime: health?.gemini?.configured ? "Live" : "Key missing",
+    },
+    {
+      name: "0G Storage",
+      status: health?.storage?.configured ? "Operational" : "Local fallback",
+      uptime: health?.storage?.configured ? "Connected" : "Fallback mode",
+    },
+    {
+      name: "Contract registry",
+      status: contract?.configured ? "Operational" : "Not deployed",
+      uptime: health?.chain?.name ?? "0G Galileo",
+    },
+  ];
 
   return (
     <DashboardLayout
       title="Admin panel"
-      subtitle="Manage workspace members, roles, and system-wide health."
+      subtitle="Workspace settings, system health, and audit log."
       actions={
         <Button
           data-testid="button-invite-member"
@@ -40,99 +84,22 @@ export default function AdminPanelPage() {
       }
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatBlock label="MEMBERS" value="6" delta="↑ 1 invited" testId="stat-members" />
-        <StatBlock label="WORKSPACES" value="3" delta="Pro plan limit: 5" testId="stat-workspaces" />
-        <StatBlock label="MONTHLY ACTIVE" value="14" delta="↑ 2 this week" testId="stat-mau" />
-        <StatBlock label="OPEN INCIDENTS" value="1" delta="Inference latency" testId="stat-incidents" />
+        <StatBlock label="AGENTS" value={statsLoading ? "—" : String(stats?.agentCount ?? 0)} delta="In workspace" testId="stat-members" />
+        <StatBlock label="MEMORIES" value={statsLoading ? "—" : String(stats?.memoryCount ?? 0)} delta="Encrypted" testId="stat-workspaces" />
+        <StatBlock label="AUDIT EVENTS" value={statsLoading ? "—" : String(stats?.auditCount ?? 0)} delta="Total" testId="stat-mau" />
+        <StatBlock
+          label="CONTRACT"
+          value={contract?.configured ? "Deployed" : "Pending"}
+          delta={contract?.chain?.name ?? "0G Galileo"}
+          testId="stat-incidents"
+        />
       </div>
-
-      <DashboardCard className="mt-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-base text-white">Members</h2>
-          <div className="flex flex-wrap gap-2">
-            {["All", ...roles].map((r) => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setFilter(r)}
-                data-testid={`filter-role-${r.toLowerCase()}`}
-                className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                  filter === r
-                    ? "bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] text-white"
-                    : "border border-[#ffffff14] bg-[#ffffff08] text-slate-400 hover:text-white"
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 overflow-hidden rounded-lg border border-[#ffffff0d]">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[#ffffff05] text-[10px] tracking-[1px] text-slate-500">
-              <tr>
-                <th className="px-4 py-3">MEMBER</th>
-                <th className="px-4 py-3">ROLE</th>
-                <th className="px-4 py-3">STATUS</th>
-                <th className="px-4 py-3">LAST ACTIVE</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((m) => (
-                <tr
-                  key={m.email}
-                  data-testid={`member-row-${m.email}`}
-                  className="border-t border-[#ffffff0d] text-slate-300"
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] text-xs">
-                        {m.name.split(" ").map((n) => n[0]).join("")}
-                      </div>
-                      <div>
-                        <p className="text-white">{m.name}</p>
-                        <p className="text-xs text-slate-500">{m.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge className="border border-[#ffffff14] bg-[#ffffff08] text-[10px] tracking-[1px] text-violet-300 hover:bg-[#ffffff08]">
-                      {m.role.toUpperCase()}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`text-xs ${
-                        m.status === "Active" ? "text-cyan-400" : "text-amber-300"
-                      }`}
-                    >
-                      {m.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">{m.lastActive}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      data-testid={`button-member-actions-${m.email}`}
-                      className="text-slate-500 hover:text-white"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </DashboardCard>
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <DashboardCard>
           <h2 className="text-base text-white">System health</h2>
           <div className="mt-4 space-y-3">
-            {systemHealth.map((s) => (
+            {systemServices.map((s) => (
               <div
                 key={s.name}
                 data-testid={`health-${s.name.toLowerCase().replace(/\s+/g, "-")}`}
@@ -145,7 +112,9 @@ export default function AdminPanelPage() {
                     className={`border-0 text-[10px] tracking-[1px] hover:bg-transparent ${
                       s.status === "Operational"
                         ? "bg-cyan-400/10 text-cyan-300"
-                        : "bg-amber-400/10 text-amber-300"
+                        : s.status === "Not configured" || s.status === "Not deployed"
+                        ? "bg-amber-400/10 text-amber-300"
+                        : "bg-slate-400/10 text-slate-300"
                     }`}
                   >
                     {s.status.toUpperCase()}
@@ -159,50 +128,87 @@ export default function AdminPanelPage() {
         <DashboardCard>
           <h2 className="text-base text-white">Workspace settings</h2>
           <div className="mt-4 space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border border-[#ffffff0d] bg-[#ffffff05] p-3">
-              <div>
-                <p className="text-white">Workspace name</p>
-                <p className="text-xs text-slate-500">NeuroVault Labs</p>
-              </div>
-              <button
-                type="button"
-                data-testid="button-edit-workspace"
-                className="text-xs text-violet-400 hover:text-violet-300"
-              >
-                Edit
-              </button>
+            <div className="rounded-lg border border-[#ffffff0d] bg-[#ffffff05] p-3">
+              <p className="text-slate-400">Workspace name</p>
+              <p className="mt-1 text-white">{ws?.name ?? "—"}</p>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-[#ffffff0d] bg-[#ffffff05] p-3">
-              <div>
-                <p className="text-white">Default agent runtime</p>
-                <p className="text-xs text-slate-500">GPT-4 Turbo</p>
-              </div>
-              <button
-                type="button"
-                data-testid="button-edit-runtime"
-                className="text-xs text-violet-400 hover:text-violet-300"
-              >
-                Change
-              </button>
+            <div className="rounded-lg border border-[#ffffff0d] bg-[#ffffff05] p-3">
+              <p className="text-slate-400">Owner wallet</p>
+              <p className="mt-1 font-mono text-xs text-white">{address ?? "—"}</p>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-rose-400/40 bg-rose-400/5 p-3">
-              <div>
-                <p className="text-rose-200">Delete workspace</p>
-                <p className="text-xs text-rose-300/70">
-                  This action is permanent and irreversible.
-                </p>
-              </div>
-              <button
-                type="button"
-                data-testid="button-delete-workspace"
-                className="text-xs text-rose-300 hover:text-rose-200"
-              >
-                Delete
-              </button>
+            <div className="rounded-lg border border-[#ffffff0d] bg-[#ffffff05] p-3">
+              <p className="text-slate-400">AI Provider</p>
+              <p className="mt-1 text-white">Gemini 2.5 Flash</p>
             </div>
+            {contract?.configured && contract?.explorerUrl && (
+              <a
+                href={contract.explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between rounded-lg border border-cyan-400/20 bg-cyan-400/5 p-3"
+              >
+                <div>
+                  <p className="text-cyan-300">AgentRegistry contract</p>
+                  <p className="mt-0.5 font-mono text-[10px] text-slate-400">
+                    {contract.address?.slice(0, 20)}…
+                  </p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-cyan-400" />
+              </a>
+            )}
           </div>
         </DashboardCard>
       </div>
+
+      <DashboardCard className="mt-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base text-white">Audit log</h2>
+          <Badge className="border border-[#ffffff14] bg-[#ffffff08] text-[10px] tracking-[1px] text-slate-400 hover:bg-[#ffffff08]">
+            {auditEntries.length} events
+          </Badge>
+        </div>
+        <div className="mt-4 overflow-hidden rounded-lg border border-[#ffffff0d]">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[#ffffff05] text-[10px] tracking-[1px] text-slate-500">
+              <tr>
+                <th className="px-4 py-3">ACTION</th>
+                <th className="px-4 py-3">ACTOR</th>
+                <th className="px-4 py-3">TARGET</th>
+                <th className="px-4 py-3">WHEN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {auditEntries.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                    {workspaceId ? "No audit events yet." : "Connect wallet to view audit log."}
+                  </td>
+                </tr>
+              )}
+              {auditEntries.map((entry: any) => (
+                <tr
+                  key={entry.id}
+                  data-testid={`audit-row-${entry.id}`}
+                  className="border-t border-[#ffffff0d] text-slate-300"
+                >
+                  <td className="px-4 py-3">
+                    <Badge className="border border-[#ffffff14] bg-[#ffffff08] text-[10px] tracking-[1px] text-violet-300 hover:bg-[#ffffff08]">
+                      {entry.action}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                    {entry.actorWallet?.slice(0, 10) ?? "system"}…
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-500">
+                    {entry.targetType}
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">{timeAgo(entry.createdAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </DashboardCard>
     </DashboardLayout>
   );
 }

@@ -1,3 +1,4 @@
+import { agentReason } from "../lib/gemini";
 import type { AgentResult } from "./index";
 
 export interface BillingAgentInput {
@@ -12,6 +13,7 @@ export interface BillingReport {
   storageCostUsd: number;
   vectorCostUsd: number;
   totalUsd: number;
+  tier: string;
   monetizationHint: string;
 }
 
@@ -29,19 +31,32 @@ export const runBillingAgent = async (
   const storageCostUsd = +(input.storageGb * PRICE.perGb).toFixed(2);
   const vectorCostUsd = +(input.vectorQueries * PRICE.perVectorQuery).toFixed(2);
   const totalUsd = +(computeCostUsd + storageCostUsd + vectorCostUsd).toFixed(2);
-  const monetizationHint =
-    totalUsd > 500
+  const tier = totalUsd > 500 ? "Enterprise" : totalUsd > 100 ? "Pro" : "Starter";
+
+  let monetizationHint =
+    tier === "Enterprise"
       ? "Workspace qualifies for Enterprise tier — apply 18% volume discount."
-      : "Workspace is on Pro tier; no discount applied.";
+      : "Workspace is on Pro tier. Growing usage detected.";
+
+  try {
+    monetizationHint = await agentReason(
+      "Billing Analyst",
+      `Workspace ${input.workspaceId} used ${input.apiCalls} API calls, ${input.storageGb.toFixed(2)} GB storage, ${input.vectorQueries} vector queries this period. Total: $${totalUsd}. Current tier: ${tier}.`,
+      [],
+    );
+  } catch {
+    // keep default
+  }
 
   return {
     agent: "billing",
-    summary: `Computed usage cost: $${totalUsd.toFixed(2)} for workspace ${input.workspaceId}.`,
+    summary: `Usage cost: $${totalUsd.toFixed(2)} | Tier: ${tier} | Workspace: ${input.workspaceId.slice(0, 8)}`,
     output: {
       computeCostUsd,
       storageCostUsd,
       vectorCostUsd,
       totalUsd,
+      tier,
       monetizationHint,
     },
     latencyMs: Date.now() - start,

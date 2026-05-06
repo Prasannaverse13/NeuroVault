@@ -1,0 +1,246 @@
+IMPORTANT UPDATE FOR THE PROJECT:
+
+Use Gemini AI API as the ONLY LLM provider in the entire NeuroVault Enterprise platform.
+
+==================================================
+GEMINI AI INTEGRATION
+=====================
+
+Use:
+
+* Google Gemini API
+* Gemini SDK
+* Gemini 1.5 Pro or latest available model
+
+Resources:
+https://ai.google.dev/
+https://ai.google.dev/gemini-api/docs
+https://aistudio.google.com/app/apikey
+
+==================================================
+REMOVE ALL MOCK DATA
+====================
+
+CRITICAL:
+Remove ALL mock data, fake JSON, placeholder responses, and demo-generated static data from the entire project.
+
+ONLY use:
+
+* real Gemini AI responses
+* real wallet data
+* real blockchain interactions
+* real 0G Storage uploads/retrievals
+* real memory persistence
+* real timestamps
+* real API-generated outputs
+
+NO:
+
+* fake chat responses
+* mock agents
+* dummy analytics
+* static dashboard numbers
+* placeholder memory records
+* hardcoded AI outputs
+
+Everything must function dynamically in real-time.
+
+==================================================
+WHERE GEMINI AI MUST BE USED
+============================
+
+1. AI Copilot Chat
+   Flow:
+   User Query
+   → Retrieve memory context
+   → Send to Gemini
+   → Generate intelligent contextual response
+   → Store interaction in 0G Storage
+
+Gemini handles:
+
+* contextual reasoning
+* enterprise assistant responses
+* incident analysis
+* memory-aware answers
+
+==================================================
+2. MEMORY SUMMARIZATION
+=======================
+
+When logs, tickets, or conversations are ingested:
+
+Flow:
+Raw Data
+→ Gemini summarizes content
+→ Generate structured memory object
+→ Store in 0G Storage
+
+Gemini generates:
+
+* summary
+* tags
+* category
+* importance level
+
+==================================================
+3. AUTO TAGGING SYSTEM
+======================
+
+Gemini automatically classifies memories into:
+
+* DevOps
+* Infra
+* Incident
+* Finance
+* Security
+* Support
+* Knowledge
+
+NO hardcoded tags.
+
+==================================================
+4. MEMORY RETRIEVAL + CONTEXT INJECTION
+=======================================
+
+Flow:
+User asks question
+→ Retrieve relevant memories
+→ Inject into Gemini prompt
+→ Gemini generates contextual response
+
+This must work dynamically using real stored memory.
+
+==================================================
+5. ENTERPRISE INSIGHTS ENGINE
+=============================
+
+Gemini analyzes:
+
+* stored incidents
+* memory patterns
+* recurring failures
+* operational trends
+
+Generate real AI insights dynamically.
+
+Example:
+“Most production failures this week were related to Kubernetes memory overload.”
+
+==================================================
+6. MULTI-AGENT REASONING
+========================
+
+Gemini powers:
+
+* DevOps Agent
+* Memory Agent
+* Privacy Agent
+* Billing Agent
+
+The OpenClaw-style orchestrator routes tasks between agents.
+
+==================================================
+7. KNOWLEDGE EXTRACTION
+=======================
+
+Gemini extracts reusable enterprise knowledge from:
+
+* uploaded docs
+* logs
+* tickets
+* conversations
+
+Then:
+
+* convert into memory objects
+* store in 0G Storage
+
+==================================================
+REAL-TIME DATA REQUIREMENTS
+===========================
+
+All dashboards and analytics must use:
+
+* live memory counts
+* real storage uploads
+* actual wallet addresses
+* live transaction hashes
+* actual contract addresses
+* real timestamps
+
+Analytics must update dynamically from backend APIs.
+
+==================================================
+REAL BLOCKCHAIN + STORAGE REQUIREMENTS
+======================================
+
+Use:
+
+* real RainbowKit wallet connection
+* real MetaMask interaction
+* real smart contract deployment
+* actual 0G chain interaction
+* actual 0G Storage upload/retrieval
+
+Display:
+
+* contract address
+* transaction hash
+* explorer links
+* uploaded storage references
+
+==================================================
+PRIVACY LAYER
+=============
+
+Implement real AES encryption for memory payloads before storing in 0G Storage.
+
+Flow:
+Memory created
+→ Encrypt sensitive payload
+→ Upload encrypted data
+→ Decrypt temporarily during retrieval
+→ Send sanitized context to Gemini
+
+==================================================
+FINAL SYSTEM FLOW
+=================
+
+Wallet Connect (RainbowKit)
+↓
+Create Workspace
+↓
+Create Agent ID
+↓
+User Query
+↓
+OpenClaw-style Orchestrator
+↓
+Retrieve Memories from 0G
+↓
+Gemini AI Processing
+↓
+Generate Response
+↓
+Encrypt + Store New Memory in 0G
+↓
+Update Analytics Dashboard
+
+==================================================
+IMPORTANT
+=========
+
+The project must feel like a real production-grade enterprise AI infrastructure platform.
+
+Prioritize:
+
+* real-time systems
+* real blockchain activity
+* real decentralized storage
+* real AI reasoning
+* real encrypted memory persistence
+
+No demo-only architecture.
+No fake responses.
+No placeholder logic.

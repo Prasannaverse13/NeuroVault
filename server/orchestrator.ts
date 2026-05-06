@@ -1,8 +1,7 @@
 /**
- * OpenClaw-style orchestrator.
+ * OpenClaw-style orchestrator — Gemini-powered.
  *
- * Coordinates Memory → DevOps → Privacy → Billing agents, then synthesizes
- * a final response via the Compute layer.
+ * Flow: Memory → DevOps → Billing → Gemini inference → Privacy (always last)
  */
 import type { Memory } from "@shared/schema";
 import {
@@ -13,7 +12,9 @@ import {
   type AgentName,
   type AgentResult,
 } from "./agents";
-import { executeInference } from "./lib/zeroGCompute";
+import { chatWithHistory, type ChatMessage } from "./lib/gemini";
+import { computeStatus } from "./lib/zeroGCompute";
+import { randomBytes } from "node:crypto";
 
 export interface OrchestratorContext {
   workspaceId: string;
@@ -21,6 +22,7 @@ export interface OrchestratorContext {
   memories: Memory[];
   usage: { apiCalls: number; storageGb: number; vectorQueries: number };
   agentRouting?: AgentName[];
+  chatHistory?: ChatMessage[];
 }
 
 export interface OrchestratorWorkflow {
@@ -31,14 +33,15 @@ export interface OrchestratorWorkflow {
   inferenceJobId: string;
   totalLatencyMs: number;
   routedTo: AgentName[];
+  provider: string;
 }
 
 const decideRouting = (query: string): AgentName[] => {
   const lq = query.toLowerCase();
   const route: AgentName[] = ["memory"];
-  if (/deploy|incident|infra|outage|latency|error|slow/.test(lq)) route.push("devops");
+  if (/deploy|incident|infra|outage|latency|error|slow|crash/.test(lq)) route.push("devops");
   route.push("privacy");
-  if (/cost|bill|usage|spend|invoice|price/.test(lq)) route.push("billing");
+  if (/cost|bill|usage|spend|invoice|price|budget/.test(lq)) route.push("billing");
   return route;
 };
 
@@ -49,7 +52,7 @@ export const orchestrate = async (
   const routedTo = ctx.agentRouting ?? decideRouting(ctx.query);
   const steps: AgentResult[] = [];
 
-  // 1. Memory Agent — always runs first to establish context
+  // 1. Memory Agent — vector retrieval + Gemini context analysis
   const memoryStep = await runMemoryAgent({
     query: ctx.query,
     memories: ctx.memories,
@@ -57,16 +60,19 @@ export const orchestrate = async (
   });
   steps.push(memoryStep);
 
-  // 2. DevOps Agent — analyzes against retrieved memories
+  const retrievedMemories = memoryStep.output as any[];
+  const contextSummaries: string[] = retrievedMemories.map((m: any) => m.summary);
+
+  // 2. DevOps Agent — Gemini-powered incident/performance analysis
   if (routedTo.includes("devops")) {
     const devopsStep = await runDevOpsAgent({
       query: ctx.query,
-      memories: memoryStep.output as any,
+      memories: retrievedMemories,
     });
     steps.push(devopsStep);
   }
 
-  // 3. Billing Agent — usage + monetization
+  // 3. Billing Agent — usage analysis
   if (routedTo.includes("billing")) {
     const billingStep = await runBillingAgent({
       workspaceId: ctx.workspaceId,
@@ -75,18 +81,35 @@ export const orchestrate = async (
     steps.push(billingStep);
   }
 
-  // 4. Compute / inference synthesis
-  const draft = steps
+  // 4. Gemini inference — full context-aware response
+  const agentFindings = steps
     .map((s) => `[${s.agent.toUpperCase()}] ${s.summary}`)
     .join("\n");
-  const inference = await executeInference({
-    prompt: `Synthesize a workspace response for: "${ctx.query}"\nAgent findings:\n${draft}`,
-    context: (memoryStep.output as any[]).map((m: any) => m.summary),
-  });
 
-  // 5. Privacy Agent — sanitize the final response (always runs last)
+  const systemInstruction = `You are NeuroVault Copilot, an enterprise AI assistant with deep memory context.
+You have access to the following workspace memories and agent analyses:
+
+Memory context:
+${contextSummaries.length > 0 ? contextSummaries.map((s, i) => `${i + 1}. ${s}`).join("\n") : "No prior memories."}
+
+Agent findings:
+${agentFindings}
+
+Be precise, professional, and actionable. Reference specific memory findings when relevant.`;
+
+  const history = ctx.chatHistory ?? [];
+  const jobId = randomBytes(8).toString("hex");
+  let draft: string;
+  try {
+    draft = await chatWithHistory(systemInstruction, history, ctx.query);
+  } catch (err) {
+    console.warn("[orchestrator] Gemini failed:", err);
+    draft = `[Gemini inference failed] Agent summary: ${agentFindings}`;
+  }
+
+  // 5. Privacy Agent — ALWAYS runs last, sanitizes before returning
   const sanitized = await runPrivacyAgent({
-    text: inference.output,
+    text: draft,
     enforceRedaction: true,
   });
   steps.push(sanitized);
@@ -96,8 +119,9 @@ export const orchestrate = async (
     query: ctx.query,
     steps,
     finalResponse: (sanitized.output as any).sanitizedText,
-    inferenceJobId: inference.jobId,
+    inferenceJobId: jobId,
     totalLatencyMs: Date.now() - start,
     routedTo,
+    provider: "gemini-2.5-flash",
   };
 };

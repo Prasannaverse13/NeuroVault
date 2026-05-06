@@ -4,23 +4,23 @@ import { z } from "zod";
 import { storage } from "./storage";
 import {
   insertAgentSchema,
-  insertMemorySchema,
-  insertAuditLogSchema,
   orchestratorRequestSchema,
   createAgentRequestSchema,
 } from "@shared/schema";
 import { encrypt, decrypt } from "./lib/encryption";
 import { uploadMemory, retrieveMemory, storageStatus } from "./lib/zeroGStorage";
-import { computeStatus, executeInference } from "./lib/zeroGCompute";
+import { computeStatus } from "./lib/zeroGCompute";
 import { embed } from "./lib/embeddings";
 import { contractStatus, fetchOnchainAgent, txExplorerUrl, activeChain } from "./lib/contract";
 import { orchestrate } from "./orchestrator";
 import { runPrivacyAgent } from "./agents";
-
-const walletConnectSchema = z.object({
-  wallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
-  workspaceName: z.string().optional(),
-});
+import {
+  isGeminiConfigured,
+  summarizeMemory,
+  generateInsights,
+  chatWithHistory,
+  type ChatMessage,
+} from "./lib/gemini";
 
 const handle = (fn: (req: Request, res: Response) => Promise<unknown>) =>
   async (req: Request, res: Response) => {
@@ -37,7 +37,13 @@ const handle = (fn: (req: Request, res: Response) => Promise<unknown>) =>
     }
   };
 
+const walletConnectSchema = z.object({
+  wallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
+  workspaceName: z.string().optional(),
+});
+
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
+
   // ── /api/wallet ────────────────────────────────────────────
   app.post("/api/wallet/connect", handle(async (req) => {
     const { wallet, workspaceName } = walletConnectSchema.parse(req.body);
@@ -55,8 +61,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/wallet/:address", handle(async (req) => {
     const ws = await storage.getWorkspaceByWallet(req.params.address);
-    if (!ws) return { workspace: null };
-    return { workspace: ws };
+    return { workspace: ws ?? null };
   }));
 
   // ── /api/workspaces ────────────────────────────────────────
@@ -69,6 +74,27 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/workspaces/:id/audit", handle(async (req) =>
     ({ entries: await storage.listAudit(req.params.id) })
   ));
+
+  // ── /api/dashboard/stats ───────────────────────────────────
+  app.get("/api/dashboard/stats/:workspaceId", handle(async (req) => {
+    const { workspaceId } = req.params;
+    const agents = await storage.listAgents(workspaceId);
+    const memories = await storage.listWorkspaceMemories(workspaceId);
+    const auditEntries = await storage.listAudit(workspaceId, 50);
+    const storeSt = storageStatus();
+    const contractSt = await contractStatus();
+    return {
+      agentCount: agents.length,
+      memoryCount: memories.length,
+      auditCount: auditEntries.length,
+      storageBackend: storeSt.backend,
+      contractConfigured: contractSt.configured,
+      contractAddress: contractSt.address,
+      chainName: activeChain.name,
+      recentAudit: auditEntries.slice(0, 10),
+      agents: agents.slice(0, 5),
+    };
+  }));
 
   // ── /api/agents ────────────────────────────────────────────
   app.get("/api/agents", handle(async (req) => {
@@ -108,13 +134,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/agents/:id/onchain", handle(async (req) => {
     const schema = z.object({ onchainAgentId: z.string(), txHash: z.string(), contractAddress: z.string() });
     const { onchainAgentId, txHash, contractAddress } = schema.parse(req.body);
-    await storage.setAgentOnchain(
-      req.params.id,
-      onchainAgentId,
-      txHash,
-      contractAddress,
-      txExplorerUrl(txHash),
-    );
+    await storage.setAgentOnchain(req.params.id, onchainAgentId, txHash, contractAddress, txExplorerUrl(txHash));
     return { ok: true, explorerUrl: txExplorerUrl(txHash) };
   }));
 
@@ -130,22 +150,44 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const schema = z.object({
       workspaceId: z.string(),
       agentId: z.string(),
-      type: z.string(),
+      type: z.string().default("general"),
       tags: z.array(z.string()).default([]),
-      summary: z.string(),
+      summary: z.string().optional(),
       payload: z.string(),
     });
     const input = schema.parse(req.body);
+
+    // Privacy scan before processing
     const sanitized = await runPrivacyAgent({ text: input.payload, enforceRedaction: true });
-    const cipher = encrypt((sanitized.output as any).sanitizedText);
-    const embedding = embed(input.summary + " " + input.payload);
+    const cleanPayload = (sanitized.output as any).sanitizedText as string;
+
+    // Gemini-powered summarization + auto-tagging
+    let summary = input.summary ?? input.payload.slice(0, 120);
+    let tags = input.tags;
+    let category = input.type;
+    let importance: string = "medium";
+
+    if (isGeminiConfigured()) {
+      try {
+        const structured = await summarizeMemory(cleanPayload);
+        summary = structured.summary;
+        tags = structured.tags;
+        category = structured.category;
+        importance = structured.importance;
+      } catch (e) {
+        console.warn("[memory] Gemini summarization failed:", e);
+      }
+    }
+
+    const cipher = encrypt(cleanPayload);
+    const embedding = embed(summary + " " + cleanPayload.slice(0, 500));
 
     const memory = await storage.createMemory({
       workspaceId: input.workspaceId,
       agentId: input.agentId,
-      type: input.type,
-      tags: input.tags,
-      summary: input.summary,
+      type: category,
+      tags,
+      summary,
       encryptedPayload: cipher,
       storageRef: null,
       embedding: embedding as any,
@@ -169,10 +211,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       action: "memory.create",
       targetType: "memory",
       targetId: memory.id,
-      metadata: { storageBackend: upload.backend, ref: upload.storageRef },
+      metadata: { storageBackend: upload.backend, ref: upload.storageRef, importance },
     });
 
-    return { memory: { ...memory, storageRef: upload.storageRef }, storage: upload };
+    return { memory: { ...memory, storageRef: upload.storageRef }, storage: upload, importance };
   }));
 
   app.get("/api/memory/:id", handle(async (req) => {
@@ -182,6 +224,76 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try { decrypted = decrypt(m.encryptedPayload); } catch { /* ignore */ }
     const remote = m.storageRef ? await retrieveMemory(m.storageRef) : null;
     return { memory: m, decryptedPayload: decrypted, remoteCopy: remote };
+  }));
+
+  // ── /api/insights ──────────────────────────────────────────
+  app.get("/api/insights/:workspaceId", handle(async (req) => {
+    const memories = await storage.listWorkspaceMemories(req.params.workspaceId);
+    const summaries = memories.map((m) => m.summary);
+    const insights = await generateInsights(summaries);
+    return { insights, generatedAt: new Date().toISOString(), memoryCount: memories.length };
+  }));
+
+  // ── /api/copilot ───────────────────────────────────────────
+  app.post("/api/copilot/chat", handle(async (req) => {
+    const schema = z.object({
+      workspaceId: z.string(),
+      message: z.string().min(1),
+      history: z.array(z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string(),
+      })).default([]),
+    });
+    const { workspaceId, message, history } = schema.parse(req.body);
+
+    const ws = await storage.getWorkspace(workspaceId);
+    if (!ws) throw Object.assign(new Error("workspace_not_found"), { status: 404 });
+
+    const allMemories = await storage.listWorkspaceMemories(workspaceId);
+    const workflow = await orchestrate({
+      workspaceId,
+      query: message,
+      memories: allMemories,
+      usage: { apiCalls: history.length + 1, storageGb: allMemories.length * 0.001, vectorQueries: allMemories.length },
+      chatHistory: history,
+    });
+
+    // Store the conversation as a memory
+    if (isGeminiConfigured()) {
+      try {
+        const agents = await storage.listAgents(workspaceId);
+        const agentId = agents[0]?.id ?? workspaceId;
+        await storage.createMemory({
+          workspaceId,
+          agentId,
+          type: "Copilot",
+          tags: ["copilot", "conversation"],
+          summary: `Copilot: "${message.slice(0, 80)}"`,
+          encryptedPayload: encrypt(JSON.stringify({ q: message, a: workflow.finalResponse.slice(0, 500) })),
+          storageRef: null,
+          embedding: embed(message + " " + workflow.finalResponse.slice(0, 200)) as any,
+        });
+      } catch {
+        /* non-critical */
+      }
+    }
+
+    await storage.appendAudit({
+      workspaceId,
+      actorWallet: ws.ownerWallet,
+      action: "copilot.chat",
+      targetType: "query",
+      targetId: workflow.inferenceJobId,
+      metadata: { latencyMs: workflow.totalLatencyMs, routedTo: workflow.routedTo },
+    });
+
+    return {
+      response: workflow.finalResponse,
+      jobId: workflow.inferenceJobId,
+      routedTo: workflow.routedTo,
+      latencyMs: workflow.totalLatencyMs,
+      memoryCount: allMemories.length,
+    };
   }));
 
   // ── /api/storage ───────────────────────────────────────────
@@ -210,7 +322,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       workspaceId: input.workspaceId,
       query: input.query,
       memories,
-      usage: { apiCalls: 1, storageGb: 0.1, vectorQueries: memories.length },
+      usage: { apiCalls: 1, storageGb: memories.length * 0.001, vectorQueries: memories.length },
       agentRouting: input.agentRouting,
     });
     await storage.appendAudit({
@@ -241,6 +353,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     compute: computeStatus(),
     contract: await contractStatus(),
     chain: activeChain,
+    gemini: { configured: isGeminiConfigured() },
     timestamp: new Date().toISOString(),
   })));
 

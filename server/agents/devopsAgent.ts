@@ -1,3 +1,4 @@
+import { agentReason } from "../lib/gemini";
 import type { AgentResult } from "./index";
 import type { RankedMemory } from "./memoryAgent";
 
@@ -34,31 +35,44 @@ export const runDevOpsAgent = async (
   const start = Date.now();
   const category = classify(input.query);
   const severity = sev(input.memories.length);
-  const top = input.memories[0];
+  const contextSummaries = input.memories.map((m) => m.summary);
 
-  const insight: DevOpsInsight = {
-    category,
-    severity,
-    insight: top
-      ? `Top correlated memory (${top.score.toFixed(3)} relevance): ${top.summary}`
-      : "No correlated historical memories found for this query.",
-    recommendedActions: [
+  let insightText: string;
+  let actions: string[];
+
+  try {
+    insightText = await agentReason(
+      `DevOps Engineer specializing in ${category} analysis`,
+      input.query,
+      contextSummaries,
+    );
+    actions = [
       category === "incident"
-        ? "Open an incident channel and notify on-call."
+        ? "Open incident channel and notify on-call team."
         : category === "performance"
-        ? "Profile the affected service and check recent deploys."
+        ? "Profile the affected service and compare against baseline metrics."
         : category === "deployment"
-        ? "Verify staging gates and rollback if smoke tests fail."
-        : "Continue monitoring; no immediate action required.",
-      "Capture this finding as a new memory tagged 'devops'.",
-    ],
-    relatedMemoryIds: input.memories.slice(0, 3).map((m) => m.memoryId),
-  };
+        ? "Verify staging gate checks and prepare rollback procedure."
+        : "Continue monitoring and document findings.",
+      "Tag and store this analysis as a DevOps memory for future reference.",
+    ];
+  } catch {
+    insightText = input.memories[0]
+      ? `Top correlated memory: ${input.memories[0].summary}`
+      : "No correlated historical data found.";
+    actions = ["Manual investigation required."];
+  }
 
   return {
     agent: "devops",
-    summary: `Classified query as ${category} (${severity} severity).`,
-    output: insight,
+    summary: `[${category.toUpperCase()} / ${severity}] ${insightText.slice(0, 120)}`,
+    output: {
+      category,
+      severity,
+      insight: insightText,
+      recommendedActions: actions,
+      relatedMemoryIds: input.memories.slice(0, 3).map((m) => m.memoryId),
+    },
     latencyMs: Date.now() - start,
   };
 };
