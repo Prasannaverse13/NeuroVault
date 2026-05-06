@@ -33,8 +33,19 @@ Required env vars: `DATABASE_URL` (Postgres, provided by Replit)
 - Replit-specific Vite plugins (`cartographer`, `dev-banner`, `runtime-error-modal`) are conditionally loaded
 
 ## Product
-- Single-page marketing/landing site for NeuroVault
-- Sections: navigation, hero, infrastructure highlights, use cases, decentralized architecture, CTA, footer
+- Marketing landing page (`/`) with smooth-scroll nav and CTAs into the app
+- Authenticated app pages (mock data, no real auth wired yet):
+  - `/auth`, `/login`, `/signup` — sign-in / sign-up with OAuth buttons
+  - `/dashboard` — workspace overview, stats, recent runs, top agents
+  - `/agents/new` — 4-step agent creation wizard
+  - `/marketplace` — agent catalog with category filter + search
+  - `/memory` — memory clusters, semantic search, eviction
+  - `/copilot` — chat-style AI copilot with suggestions
+  - `/integrations` — toggleable integration grid (Slack, GitHub, Stripe, …)
+  - `/billing` — usage breakdown, payment methods, invoices
+  - `/privacy` — security toggles, API keys, sessions, audit log
+  - `/admin` — member management, system health, workspace settings
+- Shared `DashboardLayout` (sidebar + topbar) wraps all app pages
 - Backend scaffolding with user schema ready for future feature expansion
 
 ## User preferences

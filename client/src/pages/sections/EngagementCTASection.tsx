@@ -1,17 +1,9 @@
-import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 
 const ctaButtons = [
-  {
-    label: "Start Building Now",
-    variant: "primary" as const,
-    href: "https://neurovault.ai/signup",
-  },
-  {
-    label: "Talk to Sales",
-    variant: "secondary" as const,
-    href: "mailto:sales@neurovault.ai",
-  },
+  { label: "Start Building Now", variant: "primary" as const, href: "/auth" },
+  { label: "Talk to Sales", variant: "secondary" as const, href: "/marketplace" },
 ];
 
 export const EngagementCTASection = (): JSX.Element => {
@@ -35,20 +27,18 @@ export const EngagementCTASection = (): JSX.Element => {
           </div>
           <div className="flex w-full flex-col items-center justify-center gap-4 pt-4 sm:flex-row sm:items-start">
             {ctaButtons.map((button) => (
-              <Button
+              <Link
                 key={button.label}
-                type="button"
+                href={button.href}
                 data-testid={`button-cta-${button.label.toLowerCase().replace(/\s+/g, "-")}`}
-                onClick={() => window.open(button.href, "_blank", "noopener,noreferrer")}
                 className={
                   button.variant === "primary"
-                    ? "h-auto rounded-xl bg-white px-10 py-4 [font-family:'Inter',Helvetica] text-base font-normal leading-[25.6px] tracking-[0.16px] text-[#0b0f1a] hover:bg-white/90"
-                    : "h-auto rounded-xl border border-solid border-[#ffffff14] bg-[#ffffff08] px-10 py-4 [font-family:'Inter',Helvetica] text-base font-normal leading-[25.6px] tracking-[0.16px] text-white backdrop-blur-[10px] backdrop-brightness-[100%] [-webkit-backdrop-filter:blur(10px)_brightness(100%)] hover:bg-[#ffffff10]"
+                    ? "inline-flex h-auto items-center justify-center rounded-xl bg-white px-10 py-4 [font-family:'Inter',Helvetica] text-base font-normal leading-[25.6px] tracking-[0.16px] text-[#0b0f1a] transition-colors hover:bg-white/90"
+                    : "inline-flex h-auto items-center justify-center rounded-xl border border-solid border-[#ffffff14] bg-[#ffffff08] px-10 py-4 [font-family:'Inter',Helvetica] text-base font-normal leading-[25.6px] tracking-[0.16px] text-white backdrop-blur-[10px] backdrop-brightness-[100%] [-webkit-backdrop-filter:blur(10px)_brightness(100%)] transition-colors hover:bg-[#ffffff10]"
                 }
-                variant="ghost"
               >
                 {button.label}
-              </Button>
+              </Link>
             ))}
           </div>
         </CardContent>

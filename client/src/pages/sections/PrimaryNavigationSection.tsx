@@ -1,13 +1,20 @@
-import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 const scrollTo = (id: string) => {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
 };
 
+interface NavItem {
+  label: string;
+  target?: string;
+  href?: string;
+}
+
 export const PrimaryNavigationSection = (): JSX.Element => {
-  const navItems = [
-    { label: "Status", active: true, target: "infrastructure" },
-    { label: "Docs", active: false, target: "architecture" },
+  const navItems: NavItem[] = [
+    { label: "Status", target: "infrastructure" },
+    { label: "Marketplace", href: "/marketplace" },
+    { label: "Docs", target: "architecture" },
   ];
 
   return (
@@ -26,53 +33,44 @@ export const PrimaryNavigationSection = (): JSX.Element => {
             <ul className="flex items-center gap-4 sm:gap-6">
               {navItems.map((item) => (
                 <li key={item.label}>
-                  <button
-                    type="button"
-                    data-testid={`button-nav-${item.label.toLowerCase()}`}
-                    onClick={() => scrollTo(item.target)}
-                    className={`h-auto [font-family:'Inter',Helvetica] text-sm font-normal leading-5 tracking-[0] transition-colors ${
-                      item.active
-                        ? "text-white"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    {item.label}
-                  </button>
+                  {item.href ? (
+                    <Link
+                      href={item.href}
+                      data-testid={`button-nav-${item.label.toLowerCase()}`}
+                      className="h-auto [font-family:'Inter',Helvetica] text-sm font-normal leading-5 tracking-[0] text-slate-400 transition-colors hover:text-white"
+                    >
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      data-testid={`button-nav-${item.label.toLowerCase()}`}
+                      onClick={() => scrollTo(item.target!)}
+                      className="h-auto [font-family:'Inter',Helvetica] text-sm font-normal leading-5 tracking-[0] text-slate-400 transition-colors hover:text-white"
+                    >
+                      {item.label}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
           </nav>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
-          <button
-            type="button"
-            data-testid="button-workspace"
-            onClick={() => scrollTo("use-cases")}
+          <Link
+            href="/auth"
+            data-testid="button-sign-in"
             className="h-auto [font-family:'Inter',Helvetica] text-center text-sm font-normal leading-5 tracking-[0] text-slate-400 transition-colors hover:text-white"
           >
-            Workspace
-          </button>
-          <Button
-            type="button"
-            data-testid="button-upgrade-plan"
-            onClick={() => scrollTo("cta")}
-            className="h-auto rounded-lg bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] px-3 py-2 shadow-[0px_0px_15px_#8b5cf633] [font-family:'Inter',Helvetica] text-sm font-normal leading-5 tracking-[0] text-white hover:opacity-95 sm:px-5"
+            Sign in
+          </Link>
+          <Link
+            href="/dashboard"
+            data-testid="button-launch-workspace"
+            className="inline-flex h-auto items-center justify-center rounded-lg bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] px-3 py-2 shadow-[0px_0px_15px_#8b5cf633] [font-family:'Inter',Helvetica] text-sm font-normal leading-5 tracking-[0] text-white transition-opacity hover:opacity-95 sm:px-5"
           >
-            Upgrade Plan
-          </Button>
-          <button
-            type="button"
-            aria-label="Account options"
-            data-testid="button-account"
-            onClick={() => scrollTo("footer")}
-            className="flex h-auto items-center justify-center"
-          >
-            <img
-              className="block shrink-0"
-              alt="Margin"
-              src="/figmaAssets/margin-1.svg"
-            />
-          </button>
+            Launch Workspace
+          </Link>
         </div>
       </div>
     </header>

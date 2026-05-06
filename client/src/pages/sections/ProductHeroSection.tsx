@@ -1,10 +1,6 @@
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
-const scrollTo = (id: string) => {
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-};
 
 const heroContent = {
   badge: "V2.0 ENTERPRISE RELEASE",
@@ -13,16 +9,8 @@ const heroContent = {
     "bridge high-performance computation with persistent cognitive storage.",
   ],
   actions: [
-    {
-      label: "Get Started",
-      variant: "primary" as const,
-      target: "cta",
-    },
-    {
-      label: "View Demo",
-      variant: "secondary" as const,
-      target: "use-cases",
-    },
+    { label: "Get Started", variant: "primary" as const, href: "/auth" },
+    { label: "View Demo", variant: "secondary" as const, href: "/dashboard" },
   ],
 };
 
@@ -57,22 +45,19 @@ export const ProductHeroSection = (): JSX.Element => {
           >
             {heroContent.actions.map((action) => {
               const isPrimary = action.variant === "primary";
-
               return (
-                <Button
+                <Link
                   key={action.label}
-                  type="button"
+                  href={action.href}
                   data-testid={`button-hero-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
-                  onClick={() => scrollTo(action.target)}
                   className={
                     isPrimary
-                      ? "h-auto rounded-xl px-8 py-4 [font-family:'Inter',Helvetica] text-base font-normal tracking-[0.16px] leading-[25.6px] text-white shadow-[0px_0px_20px_#8b5cf64c] bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] hover:opacity-95"
-                      : "h-auto rounded-xl border border-[#ffffff1a] bg-[#ffffff0d] px-8 py-4 [font-family:'Inter',Helvetica] text-base font-normal tracking-[0.16px] leading-[25.6px] text-white backdrop-blur-md backdrop-brightness-[100%] [-webkit-backdrop-filter:blur(12px)_brightness(100%)] hover:bg-[#ffffff14]"
+                      ? "inline-flex h-auto items-center justify-center rounded-xl px-8 py-4 [font-family:'Inter',Helvetica] text-base font-normal tracking-[0.16px] leading-[25.6px] text-white shadow-[0px_0px_20px_#8b5cf64c] bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] transition-opacity hover:opacity-95"
+                      : "inline-flex h-auto items-center justify-center rounded-xl border border-[#ffffff1a] bg-[#ffffff0d] px-8 py-4 [font-family:'Inter',Helvetica] text-base font-normal tracking-[0.16px] leading-[25.6px] text-white backdrop-blur-md backdrop-brightness-[100%] [-webkit-backdrop-filter:blur(12px)_brightness(100%)] transition-colors hover:bg-[#ffffff14]"
                   }
-                  variant="ghost"
                 >
                   {action.label}
-                </Button>
+                </Link>
               );
             })}
           </nav>

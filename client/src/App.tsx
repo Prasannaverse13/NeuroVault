@@ -6,13 +6,33 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 
 import { LandingPage } from "@/pages/LandingPage";
+import AuthPage from "@/pages/AuthPage";
+import DashboardPage from "@/pages/DashboardPage";
+import AgentCreationPage from "@/pages/AgentCreationPage";
+import MemoryIntelligencePage from "@/pages/MemoryIntelligencePage";
+import IntegrationsPage from "@/pages/IntegrationsPage";
+import AICopilotPage from "@/pages/AICopilotPage";
+import AgentMarketplacePage from "@/pages/AgentMarketplacePage";
+import WalletBillingPage from "@/pages/WalletBillingPage";
+import PrivacySecurityPage from "@/pages/PrivacySecurityPage";
+import AdminPanelPage from "@/pages/AdminPanelPage";
 
 function Router() {
   return (
     <Switch>
-      {/* Add pages below */}
       <Route path="/" component={LandingPage} />
-      {/* Fallback to 404 */}
+      <Route path="/auth" component={AuthPage} />
+      <Route path="/login" component={AuthPage} />
+      <Route path="/signup" component={AuthPage} />
+      <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/agents/new" component={AgentCreationPage} />
+      <Route path="/memory" component={MemoryIntelligencePage} />
+      <Route path="/integrations" component={IntegrationsPage} />
+      <Route path="/copilot" component={AICopilotPage} />
+      <Route path="/marketplace" component={AgentMarketplacePage} />
+      <Route path="/billing" component={WalletBillingPage} />
+      <Route path="/privacy" component={PrivacySecurityPage} />
+      <Route path="/admin" component={AdminPanelPage} />
       <Route component={NotFound} />
     </Switch>
   );
