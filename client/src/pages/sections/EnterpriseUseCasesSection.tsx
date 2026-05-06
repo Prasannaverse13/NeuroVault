@@ -1,6 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+const scrollTo = (id: string) => {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+};
+
 const useCases = [
   {
     title: "DevOps AI",
@@ -71,6 +75,8 @@ export const EnterpriseUseCasesSection = (): JSX.Element => {
           </div>
           <Button
             variant="ghost"
+            data-testid="button-explore-use-cases"
+            onClick={() => scrollTo("cta")}
             className="h-auto justify-start gap-2 px-0 py-0 text-violet-400 hover:bg-transparent hover:text-violet-400"
           >
             <span className="[font-family:'Inter',Helvetica] text-base font-normal leading-6 tracking-[0]">

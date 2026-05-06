@@ -2,6 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+const scrollTo = (id: string) => {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+};
+
 const heroContent = {
   badge: "V2.0 ENTERPRISE RELEASE",
   description: [
@@ -12,10 +16,12 @@ const heroContent = {
     {
       label: "Get Started",
       variant: "primary" as const,
+      target: "cta",
     },
     {
       label: "View Demo",
       variant: "secondary" as const,
+      target: "use-cases",
     },
   ],
 };
@@ -56,6 +62,8 @@ export const ProductHeroSection = (): JSX.Element => {
                 <Button
                   key={action.label}
                   type="button"
+                  data-testid={`button-hero-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
+                  onClick={() => scrollTo(action.target)}
                   className={
                     isPrimary
                       ? "h-auto rounded-xl px-8 py-4 [font-family:'Inter',Helvetica] text-base font-normal tracking-[0.16px] leading-[25.6px] text-white shadow-[0px_0px_20px_#8b5cf64c] bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] hover:opacity-95"

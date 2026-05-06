@@ -7,24 +7,28 @@ import { ProductFooterSection } from "./sections/ProductFooterSection";
 import { ProductHeroSection } from "./sections/ProductHeroSection";
 
 export const LandingPage = (): JSX.Element => {
-  const sectionOrder = [
-    { id: "hero", component: <ProductHeroSection /> },
-    { id: "infrastructure", component: <InfrastructureHighlightsSection /> },
-    { id: "use-cases", component: <EnterpriseUseCasesSection /> },
-    { id: "architecture", component: <DecentralizedArchitectureSection /> },
-    { id: "cta", component: <EngagementCTASection /> },
-    { id: "footer", component: <ProductFooterSection /> },
-  ];
-
   return (
     <main className="relative w-full overflow-x-hidden bg-[linear-gradient(0deg,rgba(11,15,26,1)_0%,rgba(11,15,26,1)_100%),linear-gradient(0deg,rgba(255,255,255,1)_0%,rgba(255,255,255,1)_100%)] text-white">
       <PrimaryNavigationSection />
       <div className="flex w-full flex-col">
-        {sectionOrder.map((section) => (
-          <section key={section.id} className="relative w-full">
-            {section.component}
-          </section>
-        ))}
+        <section id="hero" className="relative w-full">
+          <ProductHeroSection />
+        </section>
+        <section id="infrastructure" className="relative w-full">
+          <InfrastructureHighlightsSection />
+        </section>
+        <section id="use-cases" className="relative w-full">
+          <EnterpriseUseCasesSection />
+        </section>
+        <section id="architecture" className="relative w-full">
+          <DecentralizedArchitectureSection />
+        </section>
+        <section id="cta" className="relative w-full">
+          <EngagementCTASection />
+        </section>
+        <section id="footer" className="relative w-full">
+          <ProductFooterSection />
+        </section>
       </div>
     </main>
   );

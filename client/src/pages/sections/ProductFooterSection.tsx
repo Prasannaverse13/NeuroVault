@@ -1,9 +1,22 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 
-const footerLinks = ["DOCS", "GITHUB", "PRIVACY POLICY", "TERMS"];
+const footerLinks = [
+  { label: "DOCS", href: "#infrastructure" },
+  { label: "GITHUB", href: "https://github.com/neurovault", external: true },
+  { label: "PRIVACY POLICY", href: "#footer" },
+  { label: "TERMS", href: "#footer" },
+];
 
 export const ProductFooterSection = (): JSX.Element => {
+  const handleClick = (href: string, external?: boolean) => {
+    if (external) {
+      window.open(href, "_blank", "noopener,noreferrer");
+    } else if (href.startsWith("#")) {
+      const id = href.slice(1);
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <footer className="relative w-full border-t border-[#ffffff0d] bg-transparent px-4 py-5 opacity-70 sm:px-6 md:px-10 lg:px-12">
       <div className="mx-auto flex w-full max-w-screen-xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -13,14 +26,15 @@ export const ProductFooterSection = (): JSX.Element => {
         <nav aria-label="Footer navigation" className="order-3 md:order-2">
           <ul className="flex flex-wrap items-center gap-x-6 gap-y-2 md:gap-8">
             {footerLinks.map((link) => (
-              <li key={link}>
-                <Button
+              <li key={link.label}>
+                <button
                   type="button"
-                  variant="link"
-                  className="h-auto p-0 [font-family:'Inter',Helvetica] text-[10px] font-normal leading-[15px] tracking-[1.00px] text-slate-600 no-underline hover:text-slate-400 hover:no-underline"
+                  data-testid={`button-footer-${link.label.toLowerCase().replace(/\s+/g, "-")}`}
+                  onClick={() => handleClick(link.href, link.external)}
+                  className="h-auto p-0 [font-family:'Inter',Helvetica] text-[10px] font-normal leading-[15px] tracking-[1.00px] text-slate-600 no-underline transition-colors hover:text-slate-400"
                 >
-                  {link}
-                </Button>
+                  {link.label}
+                </button>
               </li>
             ))}
           </ul>

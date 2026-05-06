@@ -5,10 +5,12 @@ const ctaButtons = [
   {
     label: "Start Building Now",
     variant: "primary" as const,
+    href: "https://neurovault.ai/signup",
   },
   {
     label: "Talk to Sales",
     variant: "secondary" as const,
+    href: "mailto:sales@neurovault.ai",
   },
 ];
 
@@ -36,6 +38,8 @@ export const EngagementCTASection = (): JSX.Element => {
               <Button
                 key={button.label}
                 type="button"
+                data-testid={`button-cta-${button.label.toLowerCase().replace(/\s+/g, "-")}`}
+                onClick={() => window.open(button.href, "_blank", "noopener,noreferrer")}
                 className={
                   button.variant === "primary"
                     ? "h-auto rounded-xl bg-white px-10 py-4 [font-family:'Inter',Helvetica] text-base font-normal leading-[25.6px] tracking-[0.16px] text-[#0b0f1a] hover:bg-white/90"
