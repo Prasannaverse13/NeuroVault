@@ -1,0 +1,341 @@
+Build the core backend + integration architecture for a production-grade enterprise SaaS platform called “NeuroVault Enterprise”.
+
+IMPORTANT:
+The UI is already designed separately.
+Focus ONLY on:
+
+* integrations
+* backend workflows
+* 0G infrastructure integration
+* smart contract flow
+* agent orchestration
+* memory pipeline
+* security/privacy implementation
+
+Do NOT add any other authentication methods.
+ONLY use wallet authentication with RainbowKit.
+
+==================================================
+AUTHENTICATION
+==============
+
+Use:
+
+* RainbowKit
+* wagmi
+* MetaMask wallet connection
+
+Authentication flow:
+
+1. User connects wallet
+2. Wallet address becomes enterprise identity
+3. Workspace is created
+4. Agent ownership linked to wallet address
+
+NO:
+
+* Google auth
+* Email auth
+* OAuth
+* Clerk/Auth0
+
+==================================================
+CORE PROJECT ARCHITECTURE
+=========================
+
+The platform is an enterprise AI memory infrastructure system.
+
+Main workflow:
+
+User Query
+↓
+OpenClaw-style Orchestrator
+↓
+Specialized AI Agents
+↓
+Memory Retrieval Engine
+↓
+0G Storage
+↓
+AI Response
+
+==================================================
+OPENCLAW-STYLE AGENT ORCHESTRATION
+==================================
+
+Create an orchestrator service that coordinates multiple agents.
+
+Agents:
+
+1. Memory Agent
+
+* retrieves memories
+* ranks relevance
+
+2. DevOps Agent
+
+* analyzes incidents/logs
+* generates insights
+
+3. Privacy Agent
+
+* filters sensitive data
+* encrypts/decrypts memory
+
+4. Billing Agent
+
+* tracks usage
+* prepares monetization logic
+
+Workflow:
+
+1. User sends query
+2. Orchestrator decides which agents to invoke
+3. Memory Agent retrieves relevant context
+4. DevOps Agent analyzes data
+5. Privacy Agent sanitizes response
+6. Final response returned to user
+
+Add workflow visualization support for frontend.
+
+==================================================
+0G STORAGE INTEGRATION (COMPULSORY)
+===================================
+
+Integrate 0G Storage SDK/API.
+
+Use 0G Storage for:
+
+* memory logs
+* embeddings metadata
+* AI interaction history
+* agent metadata
+* encrypted memory backups
+
+Workflow:
+
+1. User interaction occurs
+2. Generate structured JSON memory object
+3. Encrypt sensitive fields
+4. Upload JSON to 0G Storage
+5. Store returned hash/reference
+6. Retrieve memory later using hash
+
+Memory object structure:
+
+{
+"memoryId": "",
+"agentId": "",
+"workspaceId": "",
+"type": "incident",
+"tags": ["devops", "infra"],
+"summary": "",
+"encryptedPayload": "",
+"timestamp": ""
+}
+
+Implement:
+
+* uploadMemory()
+* retrieveMemory()
+* listWorkspaceMemories()
+
+==================================================
+0G CHAIN + SMART CONTRACT (COMPULSORY)
+======================================
+
+Create a minimal smart contract for Agent Identity management.
+
+Contract requirements:
+
+* deployable to 0G chain
+* stores Agent ID metadata
+* tracks ownership
+
+Agent structure:
+
+{
+"agentId": "",
+"name": "",
+"role": "",
+"memorySize": "",
+"owner": ""
+}
+
+Smart contract functions:
+
+* createAgent()
+* getAgent()
+* updateMemorySize()
+* transferOwnership()
+
+Backend requirements:
+
+* connect wallet
+* interact with deployed contract
+* display contract address
+* generate explorer link
+
+Store:
+
+* contract address
+* transaction hashes
+* explorer URLs
+
+==================================================
+AGENT ID SYSTEM
+===============
+
+Implement enterprise agent identity system.
+
+Each AI agent must have:
+
+* unique Agent ID
+* owner wallet
+* role
+* memory statistics
+* usage statistics
+
+Examples:
+
+* DevOps Agent
+* Support Agent
+* Finance Agent
+
+Agent IDs should be:
+
+* tied to wallet ownership
+* queryable from smart contract
+* usable in memory records
+
+==================================================
+0G COMPUTE INTEGRATION (OPTIONAL BUT INCLUDED)
+==============================================
+
+Create abstraction layer for 0G Compute.
+
+Implement:
+
+* compute provider interface
+* inference request structure
+* mock decentralized inference execution
+
+Even if API access is unavailable:
+
+* simulate compute execution
+* structure code cleanly for future real integration
+
+Add README comments:
+“Designed for future 0G Compute decentralized inference integration.”
+
+==================================================
+PRIVACY / TEE LAYER (TRACK 5)
+=============================
+
+Implement enterprise privacy layer.
+
+Requirements:
+
+* AES encryption for memory payloads
+* decrypt only during retrieval
+* secure processing pipeline
+
+Workflow:
+
+1. Sensitive memory detected
+2. Encrypt payload
+3. Store encrypted data in 0G Storage
+4. Decrypt temporarily during AI retrieval
+5. Never expose raw encrypted data publicly
+
+Add:
+
+* privacy middleware
+* secure memory utilities
+* TEE simulation service
+
+TEE implementation can be conceptual/simulated but architecture must be production-like.
+
+==================================================
+MEMORY PIPELINE
+===============
+
+Build complete memory workflow.
+
+Flow:
+
+1. User query received
+2. Generate embedding
+3. Search relevant memories
+4. Retrieve matching context
+5. Inject into AI prompt
+6. Generate response
+7. Store new memory
+
+Implement:
+
+* memory indexing
+* vector search abstraction
+* memory ranking
+* memory summarization
+
+==================================================
+API STRUCTURE
+=============
+
+Create scalable enterprise API routes.
+
+Required routes:
+
+/api/agents
+/api/memory
+/api/storage
+/api/privacy
+/api/workspaces
+/api/orchestrator
+/api/wallet
+/api/contracts
+
+==================================================
+ENTERPRISE FEATURES
+===================
+
+Implement:
+
+* workspace architecture
+* multi-agent support
+* role-based permissions
+* audit logging
+* usage analytics
+
+==================================================
+README REQUIREMENTS
+===================
+
+Generate professional README including:
+
+* project overview
+* architecture
+* workflow diagrams
+* 0G integrations used
+* smart contract deployment steps
+* environment setup
+* explanation of OpenClaw-style orchestration
+* privacy architecture
+* future 0G Compute integration
+
+==================================================
+IMPORTANT
+=========
+
+The project must feel like:
+“Enterprise AI Memory Infrastructure powered by decentralized AI and Web3.”
+
+Architecture should prioritize:
+
+* modularity
+* enterprise scalability
+* decentralized memory
+* agent orchestration
+* privacy-first design
+* clean separation of services
