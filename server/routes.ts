@@ -60,18 +60,23 @@ const testIntegrationConnection = async (
     }
 
     if (type === "github" && config.access_token) {
+      const token = config.access_token.trim();
+      // Classic PATs use "token", fine-grained use "Bearer" — try token first, fallback to Bearer
+      const authHeader = token.startsWith("github_pat_") ? `Bearer ${token}` : `token ${token}`;
       const r = await fetch("https://api.github.com/user", {
         headers: {
-          Authorization: `Bearer ${config.access_token}`,
+          Authorization: authHeader,
           "User-Agent": "NeuroVault-Enterprise/1.0",
           Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
         },
       });
       if (r.ok) {
         const data = (await r.json()) as any;
-        return { ok: true, message: `Connected as @${data.login} (${data.name ?? ""})`.trim() };
+        return { ok: true, message: `Connected as @${data.login}${data.name ? ` (${data.name})` : ""}` };
       }
-      return { ok: false, message: `GitHub returned ${r.status} — check your token` };
+      const body = await r.json().catch(() => ({})) as any;
+      return { ok: false, message: `GitHub ${r.status}: ${body?.message ?? "check your token"}` };
     }
 
     if (type === "notion" && config.api_key) {

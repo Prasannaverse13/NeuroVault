@@ -11,7 +11,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, XCircle, RefreshCw, Unplug, Loader2, Plug } from "lucide-react";
+import { CheckCircle2, XCircle, RefreshCw, Unplug, Loader2, Plug, Lock } from "lucide-react";
 import {
   SiSlack, SiNotion, SiGithub, SiLinear, SiHubspot,
   SiStripe, SiZendesk, SiOpenai, SiSalesforce, SiAirtable,
@@ -22,25 +22,30 @@ import type { Integration } from "@shared/schema";
 import { useAccount } from "wagmi";
 
 // ── Catalog ────────────────────────────────────────────────────────────────
+// live = true → fully supported; live = false → coming soon
 const CATALOG = [
-  { id: "slack",       name: "Slack",       category: "Communication", icon: SiSlack,      fields: [{ key: "webhook_url",       label: "Incoming Webhook URL",  placeholder: "https://hooks.slack.com/services/...", secret: false }] },
-  { id: "notion",      name: "Notion",      category: "Knowledge",     icon: SiNotion,     fields: [{ key: "api_key",           label: "Integration Token",     placeholder: "secret_...",                           secret: true  }] },
-  { id: "github",      name: "GitHub",      category: "DevOps",        icon: SiGithub,     fields: [{ key: "access_token",      label: "Personal Access Token", placeholder: "ghp_...",                              secret: true  }, { key: "repo", label: "Repository (optional)", placeholder: "org/repo", secret: false }] },
-  { id: "linear",      name: "Linear",      category: "Project mgmt",  icon: SiLinear,     fields: [{ key: "api_key",           label: "API Key",               placeholder: "lin_api_...",                          secret: true  }] },
-  { id: "hubspot",     name: "HubSpot",     category: "CRM",           icon: SiHubspot,    fields: [{ key: "api_key",           label: "Private App Token",     placeholder: "pat-na1-...",                          secret: true  }] },
-  { id: "stripe",      name: "Stripe",      category: "Payments",      icon: SiStripe,     fields: [{ key: "secret_key",        label: "Secret Key",            placeholder: "sk_live_... or sk_test_...",           secret: true  }] },
-  { id: "zendesk",     name: "Zendesk",     category: "Support",       icon: SiZendesk,    fields: [{ key: "subdomain",         label: "Subdomain",             placeholder: "yourcompany",                          secret: false }, { key: "api_token", label: "API Token", placeholder: "abc123...", secret: true }] },
-  { id: "openai",      name: "OpenAI",      category: "Models",        icon: SiOpenai,     fields: [{ key: "api_key",           label: "API Key",               placeholder: "sk-...",                               secret: true  }] },
-  { id: "salesforce",  name: "Salesforce",  category: "CRM",           icon: SiSalesforce, fields: [{ key: "instance_url",      label: "Instance URL",          placeholder: "https://yourcompany.salesforce.com",   secret: false }, { key: "access_token", label: "Access Token", placeholder: "00D...", secret: true }] },
-  { id: "airtable",    name: "Airtable",    category: "Data",          icon: SiAirtable,   fields: [{ key: "api_key",           label: "Personal Access Token", placeholder: "pat...",                               secret: true  }, { key: "base_id", label: "Base ID (optional)", placeholder: "app...", secret: false }] },
-  { id: "postgres",    name: "Postgres",    category: "Data",          icon: SiPostgresql, fields: [{ key: "connection_string", label: "Connection String",     placeholder: "postgresql://user:pass@host:5432/db",  secret: true  }] },
-  { id: "snowflake",   name: "Snowflake",   category: "Data",          icon: SiSnowflake,  fields: [{ key: "account",           label: "Account",               placeholder: "xy12345.us-east-1",                    secret: false }, { key: "username", label: "Username", placeholder: "NEUROVAULT_USER", secret: false }, { key: "password", label: "Password", placeholder: "••••••••", secret: true }] },
+  {
+    id: "github", name: "GitHub", category: "DevOps", icon: SiGithub, live: true,
+    fields: [
+      { key: "access_token", label: "Personal Access Token", placeholder: "ghp_... or github_pat_...", secret: true },
+      { key: "repo",         label: "Repository (optional)", placeholder: "org/repo",                  secret: false },
+    ],
+  },
+  { id: "slack",      name: "Slack",      category: "Communication", icon: SiSlack,      live: false, fields: [] },
+  { id: "notion",     name: "Notion",     category: "Knowledge",     icon: SiNotion,     live: false, fields: [] },
+  { id: "linear",     name: "Linear",     category: "Project mgmt",  icon: SiLinear,     live: false, fields: [] },
+  { id: "hubspot",    name: "HubSpot",    category: "CRM",           icon: SiHubspot,    live: false, fields: [] },
+  { id: "stripe",     name: "Stripe",     category: "Payments",      icon: SiStripe,     live: false, fields: [] },
+  { id: "zendesk",    name: "Zendesk",    category: "Support",       icon: SiZendesk,    live: false, fields: [] },
+  { id: "openai",     name: "OpenAI",     category: "Models",        icon: SiOpenai,     live: false, fields: [] },
+  { id: "salesforce", name: "Salesforce", category: "CRM",           icon: SiSalesforce, live: false, fields: [] },
+  { id: "airtable",   name: "Airtable",   category: "Data",          icon: SiAirtable,   live: false, fields: [] },
+  { id: "postgres",   name: "Postgres",   category: "Data",          icon: SiPostgresql, live: false, fields: [] },
+  { id: "snowflake",  name: "Snowflake",  category: "Data",          icon: SiSnowflake,  live: false, fields: [] },
 ] as const;
 
-const CATEGORIES = ["All", "Communication", "Knowledge", "DevOps", "CRM", "Data", "Models", "Payments", "Support", "Project mgmt"];
-
-// ── Types ──────────────────────────────────────────────────────────────────
 type CatalogItem = typeof CATALOG[number];
+type LiveCatalogItem = Extract<typeof CATALOG[number], { live: true }>;
 
 export default function IntegrationsPage() {
   const { toast } = useToast();
@@ -48,11 +53,9 @@ export default function IntegrationsPage() {
   const workspaceId = useWorkspaceId();
   const { address } = useAccount();
 
-  const [filter, setFilter] = useState("All");
-  const [modal, setModal] = useState<CatalogItem | null>(null);
+  const [modal, setModal] = useState<LiveCatalogItem | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
 
-  // ── Fetch connected integrations ──────────────────────────────────────────
   const { data, isLoading } = useQuery({
     queryKey: ["/api/integrations", workspaceId],
     queryFn: () => api.listIntegrations(workspaceId!),
@@ -62,10 +65,11 @@ export default function IntegrationsPage() {
 
   const connected = (data?.integrations ?? []) as Integration[];
   const connectedByType = Object.fromEntries(connected.map((i) => [i.type, i]));
+  const connectedCount = connected.filter((i) => i.status === "connected").length;
 
-  // ── Connect mutation ──────────────────────────────────────────────────────
+  // ── Connect ───────────────────────────────────────────────────────────────
   const connectMut = useMutation({
-    mutationFn: (vars: { item: CatalogItem; config: Record<string, string> }) =>
+    mutationFn: (vars: { item: LiveCatalogItem; config: Record<string, string> }) =>
       api.connectIntegration({
         workspaceId: workspaceId!,
         type: vars.item.id,
@@ -78,7 +82,11 @@ export default function IntegrationsPage() {
       if (result.testResult?.ok) {
         toast({ title: `${vars.item.name} connected`, description: result.testResult.message });
       } else {
-        toast({ title: `${vars.item.name} — connection issue`, description: result.testResult?.message, variant: "destructive" });
+        toast({
+          title: `${vars.item.name} — connection issue`,
+          description: result.testResult?.message,
+          variant: "destructive",
+        });
       }
       setModal(null);
       setFormValues({});
@@ -86,7 +94,7 @@ export default function IntegrationsPage() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  // ── Test mutation ─────────────────────────────────────────────────────────
+  // ── Re-test ───────────────────────────────────────────────────────────────
   const testMut = useMutation({
     mutationFn: (id: string) => api.testIntegration(id),
     onSuccess: (result) => {
@@ -99,21 +107,17 @@ export default function IntegrationsPage() {
     },
   });
 
-  // ── Disconnect mutation ───────────────────────────────────────────────────
+  // ── Disconnect ────────────────────────────────────────────────────────────
   const disconnectMut = useMutation({
     mutationFn: (id: string) => api.disconnectIntegration(id),
-    onSuccess: (_, id) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/integrations", workspaceId] });
       toast({ title: "Integration disconnected" });
     },
   });
 
-  const visible = CATALOG.filter((c) => filter === "All" || c.category === filter);
-  const connectedCount = connected.filter((i) => i.status === "connected").length;
-
-  const openModal = (item: CatalogItem) => {
+  const openModal = (item: LiveCatalogItem) => {
     setModal(item);
-    // Pre-fill if already connected (non-secret fields only)
     const existing = connectedByType[item.id];
     if (existing) {
       const prefill: Record<string, string> = {};
@@ -126,48 +130,52 @@ export default function IntegrationsPage() {
     }
   };
 
-  const handleConnect = () => {
-    if (!modal || !workspaceId) return;
-    connectMut.mutate({ item: modal, config: formValues });
-  };
-
   return (
     <DashboardLayout
       title="Integrations"
-      subtitle={`${connectedCount} connected • ${CATALOG.length - connectedCount} available`}
+      subtitle={`${connectedCount} connected • ${CATALOG.length} available`}
     >
-      {/* Category filters */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        {CATEGORIES.filter((c) => c === "All" || CATALOG.some((i) => i.category === c)).map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setFilter(c)}
-            data-testid={`filter-${c.toLowerCase().replace(/\s+/g, "-")}`}
-            className={`rounded-full px-4 py-1.5 text-xs transition-colors ${
-              filter === c
-                ? "bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] text-white"
-                : "border border-[#ffffff14] bg-[#ffffff08] text-slate-400 hover:text-white"
-            }`}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-
       {!workspaceId && (
-        <div className="rounded-lg border border-amber-400/20 bg-amber-400/10 p-4 text-center text-sm text-amber-300">
+        <div className="mb-6 rounded-lg border border-amber-400/20 bg-amber-400/10 p-4 text-center text-sm text-amber-300">
           Connect your wallet to manage integrations.
         </div>
       )}
 
       {/* Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visible.map((item) => {
+        {CATALOG.map((item) => {
           const Icon = item.icon;
           const integration = connectedByType[item.id as string];
           const isConnected = integration?.status === "connected";
           const hasError = integration?.status === "error";
+
+          if (!item.live) {
+            return (
+              <DashboardCard key={item.id} className="opacity-60">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#ffffff14] bg-[#ffffff08] text-slate-500">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-400">{item.name}</p>
+                      <p className="text-xs text-slate-600">{item.category}</p>
+                    </div>
+                  </div>
+                  <Badge className="border-0 bg-[#ffffff08] text-[10px] tracking-[1px] text-slate-500 hover:bg-[#ffffff08] flex items-center gap-1">
+                    <Lock className="h-2.5 w-2.5" /> SOON
+                  </Badge>
+                </div>
+                <div className="mt-4">
+                  <div
+                    className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#ffffff0d] bg-[#ffffff05] py-2 text-xs text-slate-600 cursor-not-allowed select-none"
+                  >
+                    <Lock className="h-3 w-3" /> Coming soon
+                  </div>
+                </div>
+              </DashboardCard>
+            );
+          }
 
           return (
             <DashboardCard key={item.id}>
@@ -219,7 +227,9 @@ export default function IntegrationsPage() {
                       data-testid={`button-retest-${item.id}`}
                       className="h-auto flex-1 rounded-lg border border-[#ffffff14] bg-[#ffffff08] py-2 text-xs text-slate-300 hover:bg-[#ffffff14]"
                     >
-                      {testMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <><RefreshCw className="mr-1 h-3 w-3" />Re-test</>}
+                      {testMut.isPending
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <><RefreshCw className="mr-1 h-3 w-3" />Re-test</>}
                     </Button>
                     <Button
                       type="button"
@@ -230,16 +240,18 @@ export default function IntegrationsPage() {
                       data-testid={`button-disconnect-${item.id}`}
                       className="h-auto flex-1 rounded-lg border border-[#ffffff14] bg-[#ffffff08] py-2 text-xs text-rose-300 hover:bg-[#ffffff14]"
                     >
-                      {disconnectMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Unplug className="mr-1 h-3 w-3" />Disconnect</>}
+                      {disconnectMut.isPending
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <><Unplug className="mr-1 h-3 w-3" />Disconnect</>}
                     </Button>
                   </>
                 ) : (
                   <Button
                     type="button"
-                    onClick={() => openModal(item)}
+                    onClick={() => openModal(item as LiveCatalogItem)}
                     disabled={!workspaceId}
                     data-testid={`button-connect-${item.id}`}
-                    className="h-auto w-full rounded-lg bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] py-2 text-xs text-white hover:opacity-95"
+                    className="h-auto w-full rounded-lg bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] py-2 text-xs text-white hover:opacity-95 disabled:opacity-40"
                   >
                     <Plug className="mr-1.5 h-3 w-3" />
                     Connect
@@ -279,6 +291,22 @@ export default function IntegrationsPage() {
               </div>
             ))}
 
+            {modal?.id === "github" && (
+              <div className="rounded-lg border border-violet-400/10 bg-violet-400/5 p-3 text-[11px] text-slate-400 leading-relaxed">
+                Generate a token at{" "}
+                <a
+                  href="https://github.com/settings/tokens"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-violet-300 underline hover:text-violet-200"
+                >
+                  github.com/settings/tokens
+                </a>
+                . Classic PAT: needs <span className="font-mono text-slate-300">repo</span> scope.
+                Fine-grained PAT: needs repository read access.
+              </div>
+            )}
+
             <div className="rounded-lg border border-[#ffffff0d] bg-[#ffffff05] p-3 text-[11px] text-slate-500">
               Credentials are encrypted at rest and never exposed to the frontend. The connection is tested live before saving.
             </div>
@@ -294,16 +322,17 @@ export default function IntegrationsPage() {
               </Button>
               <Button
                 type="button"
-                onClick={handleConnect}
+                onClick={() => {
+                  if (!modal || !workspaceId) return;
+                  connectMut.mutate({ item: modal, config: formValues });
+                }}
                 disabled={connectMut.isPending || !workspaceId}
                 data-testid="button-confirm-connect"
                 className="flex-1 bg-[linear-gradient(90deg,rgba(34,211,238,1)_0%,rgba(139,92,246,1)_100%)] text-white hover:opacity-95"
               >
-                {connectMut.isPending ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</>
-                ) : (
-                  "Test & Connect"
-                )}
+                {connectMut.isPending
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</>
+                  : "Test & Connect"}
               </Button>
             </div>
           </div>
