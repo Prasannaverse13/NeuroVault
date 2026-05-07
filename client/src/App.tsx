@@ -1,6 +1,8 @@
 import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/lib/auth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 
 import { LandingPage } from "@/pages/LandingPage";
@@ -22,15 +24,35 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/login" component={AuthPage} />
       <Route path="/signup" component={AuthPage} />
-      <Route path="/dashboard" component={DashboardPage} />
-      <Route path="/agents/new" component={AgentCreationPage} />
-      <Route path="/memory" component={MemoryIntelligencePage} />
-      <Route path="/integrations" component={IntegrationsPage} />
-      <Route path="/copilot" component={AICopilotPage} />
-      <Route path="/marketplace" component={AgentMarketplacePage} />
-      <Route path="/billing" component={WalletBillingPage} />
-      <Route path="/privacy" component={PrivacySecurityPage} />
-      <Route path="/admin" component={AdminPanelPage} />
+
+      <Route path="/dashboard">
+        <ProtectedRoute><DashboardPage /></ProtectedRoute>
+      </Route>
+      <Route path="/agents/new">
+        <ProtectedRoute><AgentCreationPage /></ProtectedRoute>
+      </Route>
+      <Route path="/memory">
+        <ProtectedRoute><MemoryIntelligencePage /></ProtectedRoute>
+      </Route>
+      <Route path="/integrations">
+        <ProtectedRoute><IntegrationsPage /></ProtectedRoute>
+      </Route>
+      <Route path="/copilot">
+        <ProtectedRoute><AICopilotPage /></ProtectedRoute>
+      </Route>
+      <Route path="/marketplace">
+        <ProtectedRoute><AgentMarketplacePage /></ProtectedRoute>
+      </Route>
+      <Route path="/billing">
+        <ProtectedRoute><WalletBillingPage /></ProtectedRoute>
+      </Route>
+      <Route path="/privacy">
+        <ProtectedRoute><PrivacySecurityPage /></ProtectedRoute>
+      </Route>
+      <Route path="/admin">
+        <ProtectedRoute><AdminPanelPage /></ProtectedRoute>
+      </Route>
+
       <Route component={NotFound} />
     </Switch>
   );
@@ -40,7 +62,9 @@ function App() {
   return (
     <TooltipProvider>
       <Toaster />
-      <Router />
+      <AuthProvider>
+        <Router />
+      </AuthProvider>
     </TooltipProvider>
   );
 }

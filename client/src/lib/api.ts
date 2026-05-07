@@ -1,27 +1,46 @@
 import type { Integration } from "@shared/schema";
 
+const getWalletAddress = (): string =>
+  (window as any).__nv_wallet_address ?? "";
+
+const authHeaders = (): Record<string, string> => {
+  const addr = getWalletAddress();
+  return addr ? { "x-wallet-address": addr } : {};
+};
+
+const jsonHeaders = (): Record<string, string> => ({
+  "Content-Type": "application/json",
+  ...authHeaders(),
+});
+
+export const setWalletAddress = (addr: string | undefined) => {
+  (window as any).__nv_wallet_address = addr ?? "";
+};
+
 export const api = {
   walletConnect: (wallet: string, workspaceName?: string) =>
     fetch("/api/wallet/connect", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(),
       body: JSON.stringify({ wallet, workspaceName }),
     }).then((r) => r.json()),
 
-  systemHealth: () => fetch("/api/system/health").then((r) => r.json()),
+  systemHealth: () =>
+    fetch("/api/system/health", { headers: authHeaders() }).then((r) => r.json()),
 
-  contractStatus: () => fetch("/api/contracts/status").then((r) => r.json()),
+  contractStatus: () =>
+    fetch("/api/contracts/status", { headers: authHeaders() }).then((r) => r.json()),
 
   deployContract: (): Promise<{ address?: string; txHash?: string; explorerUrl?: string; txUrl?: string; chain?: string; error?: string }> =>
-    fetch("/api/contracts/deploy", { method: "POST" }).then((r) => r.json()),
+    fetch("/api/contracts/deploy", { method: "POST", headers: jsonHeaders() }).then((r) => r.json()),
 
   dashboardStats: (workspaceId: string) =>
-    fetch(`/api/dashboard/stats/${workspaceId}`).then((r) => r.json()),
+    fetch(`/api/dashboard/stats/${workspaceId}`, { headers: authHeaders() }).then((r) => r.json()),
 
   runOrchestrator: (workspaceId: string, query: string) =>
     fetch("/api/orchestrator/run", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(),
       body: JSON.stringify({ workspaceId, query }),
     }).then((r) => r.json()),
 
@@ -32,15 +51,15 @@ export const api = {
   ) =>
     fetch("/api/copilot/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(),
       body: JSON.stringify({ workspaceId, message, history }),
     }).then((r) => r.json()),
 
   getInsights: (workspaceId: string) =>
-    fetch(`/api/insights/${workspaceId}`).then((r) => r.json()),
+    fetch(`/api/insights/${workspaceId}`, { headers: authHeaders() }).then((r) => r.json()),
 
   listAgents: (workspaceId: string) =>
-    fetch(`/api/agents?workspaceId=${workspaceId}`).then((r) => r.json()),
+    fetch(`/api/agents?workspaceId=${workspaceId}`, { headers: authHeaders() }).then((r) => r.json()),
 
   createAgent: (input: {
     workspaceId: string;
@@ -53,12 +72,12 @@ export const api = {
   }) =>
     fetch("/api/agents", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(),
       body: JSON.stringify(input),
     }).then((r) => r.json()),
 
   listMemories: (workspaceId: string) =>
-    fetch(`/api/memory?workspaceId=${workspaceId}`).then((r) => r.json()),
+    fetch(`/api/memory?workspaceId=${workspaceId}`, { headers: authHeaders() }).then((r) => r.json()),
 
   createMemory: (input: {
     workspaceId: string;
@@ -70,20 +89,19 @@ export const api = {
   }) =>
     fetch("/api/memory", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(),
       body: JSON.stringify(input),
     }).then((r) => r.json()),
 
   scanPrivacy: (text: string) =>
     fetch("/api/privacy/scan", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(),
       body: JSON.stringify({ text }),
     }).then((r) => r.json()),
 
-  // Integrations
   listIntegrations: (workspaceId: string): Promise<{ integrations: Integration[] }> =>
-    fetch(`/api/integrations?workspaceId=${workspaceId}`).then((r) => r.json()),
+    fetch(`/api/integrations?workspaceId=${workspaceId}`, { headers: authHeaders() }).then((r) => r.json()),
 
   connectIntegration: (input: {
     workspaceId: string;
@@ -94,19 +112,18 @@ export const api = {
   }): Promise<{ integration: Integration; testResult: { ok: boolean; message: string } }> =>
     fetch("/api/integrations", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(),
       body: JSON.stringify(input),
     }).then((r) => r.json()),
 
   testIntegration: (id: string): Promise<{ integration: Integration; testResult: { ok: boolean; message: string } }> =>
-    fetch(`/api/integrations/${id}/test`, { method: "POST" }).then((r) => r.json()),
+    fetch(`/api/integrations/${id}/test`, { method: "POST", headers: jsonHeaders() }).then((r) => r.json()),
 
   disconnectIntegration: (id: string): Promise<{ ok: boolean }> =>
-    fetch(`/api/integrations/${id}`, { method: "DELETE" }).then((r) => r.json()),
+    fetch(`/api/integrations/${id}`, { method: "DELETE", headers: authHeaders() }).then((r) => r.json()),
 
-  // GitHub
   githubRepos: (workspaceId: string) =>
-    fetch(`/api/github/repos?workspaceId=${workspaceId}`).then((r) => r.json()) as Promise<{
+    fetch(`/api/github/repos?workspaceId=${workspaceId}`, { headers: authHeaders() }).then((r) => r.json()) as Promise<{
       repos: Array<{
         id: number; name: string; fullName: string; description: string | null;
         language: string | null; stargazersCount: number; openIssuesCount: number;
@@ -116,18 +133,18 @@ export const api = {
     }>,
 
   githubCommits: (workspaceId: string, repo: string) =>
-    fetch(`/api/github/commits?workspaceId=${workspaceId}&repo=${encodeURIComponent(repo)}`).then((r) => r.json()),
+    fetch(`/api/github/commits?workspaceId=${workspaceId}&repo=${encodeURIComponent(repo)}`, { headers: authHeaders() }).then((r) => r.json()),
 
   githubIssues: (workspaceId: string, repo: string, state?: string) =>
-    fetch(`/api/github/issues?workspaceId=${workspaceId}&repo=${encodeURIComponent(repo)}&state=${state ?? "open"}`).then((r) => r.json()),
+    fetch(`/api/github/issues?workspaceId=${workspaceId}&repo=${encodeURIComponent(repo)}&state=${state ?? "open"}`, { headers: authHeaders() }).then((r) => r.json()),
 
   githubPulls: (workspaceId: string, repo: string) =>
-    fetch(`/api/github/pulls?workspaceId=${workspaceId}&repo=${encodeURIComponent(repo)}`).then((r) => r.json()),
+    fetch(`/api/github/pulls?workspaceId=${workspaceId}&repo=${encodeURIComponent(repo)}`, { headers: authHeaders() }).then((r) => r.json()),
 
   githubSync: (workspaceId: string) =>
     fetch("/api/github/sync", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: jsonHeaders(),
       body: JSON.stringify({ workspaceId }),
     }).then((r) => r.json()) as Promise<{ synced: number; memoriesCreated: number; repos: string[] }>,
 };

@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { type Server } from "http";
 import { z } from "zod";
 import { storage } from "./storage";
@@ -42,6 +42,17 @@ const walletConnectSchema = z.object({
   wallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   workspaceName: z.string().optional(),
 });
+
+const walletRegex = /^0x[a-fA-F0-9]{40}$/;
+
+const requireWallet = (req: Request, res: Response, next: NextFunction) => {
+  const addr = req.headers["x-wallet-address"] as string | undefined;
+  if (!addr || !walletRegex.test(addr)) {
+    res.status(401).json({ error: "wallet_required", message: "Connect your wallet to access this resource." });
+    return;
+  }
+  next();
+};
 
 const testIntegrationConnection = async (
   type: string,
@@ -108,7 +119,7 @@ export function registerRoutes(app: Express, httpServer: Server) {
     };
   }));
 
-  app.post("/api/copilot/chat", handle(async (req) => {
+  app.post("/api/copilot/chat", requireWallet, handle(async (req) => {
     const schema = z.object({
       workspaceId: z.string(),
       message: z.string().min(1),
@@ -193,7 +204,7 @@ export function registerRoutes(app: Express, httpServer: Server) {
     return { token, repo: integration.config?.repo as string | undefined };
   };
 
-  app.get("/api/github/repos", handle(async (req) => {
+  app.get("/api/github/repos", requireWallet, handle(async (req) => {
     const workspaceId = String(req.query.workspaceId ?? "");
     if (!workspaceId) throw new Error("workspaceId required");
     const { token } = await requireGithubToken(workspaceId);
@@ -201,7 +212,7 @@ export function registerRoutes(app: Express, httpServer: Server) {
     return { repos, total: repos.length, fetchedAt: new Date().toISOString() };
   }));
 
-  app.get("/api/github/commits", handle(async (req) => {
+  app.get("/api/github/commits", requireWallet, handle(async (req) => {
     const workspaceId = String(req.query.workspaceId ?? "");
     const repo = String(req.query.repo ?? "");
     if (!workspaceId || !repo) throw new Error("workspaceId and repo required");
@@ -210,7 +221,7 @@ export function registerRoutes(app: Express, httpServer: Server) {
     return { commits, repo, fetchedAt: new Date().toISOString() };
   }));
 
-  app.get("/api/github/issues", handle(async (req) => {
+  app.get("/api/github/issues", requireWallet, handle(async (req) => {
     const workspaceId = String(req.query.workspaceId ?? "");
     const repo = String(req.query.repo ?? "");
     const state = (req.query.state as "open" | "closed" | "all") ?? "open";
@@ -220,7 +231,7 @@ export function registerRoutes(app: Express, httpServer: Server) {
     return { issues, repo, state, fetchedAt: new Date().toISOString() };
   }));
 
-  app.get("/api/github/pulls", handle(async (req) => {
+  app.get("/api/github/pulls", requireWallet, handle(async (req) => {
     const workspaceId = String(req.query.workspaceId ?? "");
     const repo = String(req.query.repo ?? "");
     const state = (req.query.state as "open" | "closed" | "all") ?? "open";
@@ -230,7 +241,7 @@ export function registerRoutes(app: Express, httpServer: Server) {
     return { pulls, repo, state, fetchedAt: new Date().toISOString() };
   }));
 
-  app.post("/api/github/sync", handle(async (req) => {
+  app.post("/api/github/sync", requireWallet, handle(async (req) => {
     const { workspaceId } = z.object({ workspaceId: z.string() }).parse(req.body);
     const ws = await storage.getWorkspace(workspaceId);
     if (!ws) throw Object.assign(new Error("workspace_not_found"), { status: 404 });
