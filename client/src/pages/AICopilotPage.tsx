@@ -2,30 +2,38 @@ import { useState, useRef, useEffect } from "react";
 import { DashboardLayout, DashboardCard } from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, Sparkles, FileText, Zap, Loader2, AlertCircle } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import {
+  Send, Sparkles, FileText, Zap, Loader2, AlertCircle,
+  GitBranch, GitCommit, CircleDot, GitPullRequest, RefreshCw, ExternalLink,
+} from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, useWorkspaceId } from "@/lib/api";
 import { useAccount } from "wagmi";
+import { SiGithub } from "react-icons/si";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   latencyMs?: number;
   error?: boolean;
+  githubDataUsed?: boolean;
 }
 
 const SUGGESTIONS = [
+  "What repositories are connected to my workspace?",
+  "List recent commits and summarize the activity",
+  "Show open issues and suggest priorities",
+  "Analyze pull requests — any blocked ones?",
   "Summarize the recent incidents in this workspace",
   "What DevOps patterns do you see in my memories?",
-  "Draft a post-mortem for the latest deployment issue",
-  "Analyze recurring failures and recommend fixes",
 ];
 
 const SYSTEM_GREETING =
-  "Hello! I'm NeuroVault Copilot, powered by Gemini 2.5 Flash. I have full context from your workspace memories and can help with incident analysis, DevOps insights, knowledge extraction, and enterprise reasoning. What's on your mind?";
+  "Hello! I'm NeuroVault Copilot, powered by Gemini 2.5 Flash. I have live access to your GitHub repositories — ask me about commits, issues, pull requests, or repository activity. I also have full context from your workspace memories.\n\nWhat's on your mind?";
 
 export default function AICopilotPage() {
   const workspaceId = useWorkspaceId();
+  const qc = useQueryClient();
   const { address } = useAccount();
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: SYSTEM_GREETING },
@@ -48,6 +56,35 @@ export default function AICopilotPage() {
     staleTime: 60_000,
   });
 
+  const { data: ghData, isLoading: ghLoading, error: ghError } = useQuery({
+    queryKey: ["/api/github/repos", workspaceId],
+    enabled: !!workspaceId,
+    queryFn: () => api.githubRepos(workspaceId!),
+    staleTime: 120_000,
+    retry: false,
+  });
+
+  const syncMut = useMutation({
+    mutationFn: () => api.githubSync(workspaceId!),
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: ["/api/memory", workspaceId] });
+      qc.invalidateQueries({ queryKey: ["/api/github/repos", workspaceId] });
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: `GitHub sync complete. Indexed ${result.memoriesCreated} repositories into workspace memory:\n${result.repos.slice(0, 10).map((r) => `• ${r}`).join("\n")}`,
+        },
+      ]);
+    },
+    onError: (e: any) => {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: `Sync failed: ${e.message}`, error: true },
+      ]);
+    },
+  });
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
@@ -56,7 +93,6 @@ export default function AICopilotPage() {
     const content = (text ?? input).trim();
     if (!content || loading) return;
     setInput("");
-
     const userMsg: Message = { role: "user", content };
     const history = messages
       .filter((m) => !m.error)
@@ -70,7 +106,12 @@ export default function AICopilotPage() {
       if (res.error) throw new Error(res.error);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: res.response, latencyMs: res.latencyMs },
+        {
+          role: "assistant",
+          content: res.response,
+          latencyMs: res.latencyMs,
+          githubDataUsed: res.githubDataUsed,
+        },
       ]);
     } catch (err: any) {
       setMessages((prev) => [
@@ -84,6 +125,8 @@ export default function AICopilotPage() {
 
   const memoryCount = memData?.memories?.length ?? 0;
   const agentCount = statsData?.agentCount ?? 0;
+  const repos = ghData?.repos ?? [];
+  const githubConnected = !ghError && (ghLoading || repos.length > 0);
 
   return (
     <DashboardLayout
@@ -96,6 +139,7 @@ export default function AICopilotPage() {
       }
     >
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+        {/* Chat window */}
         <DashboardCard className="flex h-[640px] flex-col lg:col-span-3">
           <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto pr-2">
             {messages.map((m, i) => (
@@ -131,11 +175,18 @@ export default function AICopilotPage() {
                   >
                     {m.content}
                   </div>
-                  {m.latencyMs && (
-                    <span className="mt-1 text-right text-[10px] text-slate-600">
-                      {(m.latencyMs / 1000).toFixed(1)}s
-                    </span>
-                  )}
+                  <div className="mt-1 flex items-center gap-2">
+                    {m.latencyMs && (
+                      <span className="text-[10px] text-slate-600">
+                        {(m.latencyMs / 1000).toFixed(1)}s
+                      </span>
+                    )}
+                    {m.githubDataUsed && (
+                      <span className="flex items-center gap-1 text-[10px] text-emerald-500">
+                        <SiGithub className="h-2.5 w-2.5" /> live GitHub data
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -146,7 +197,7 @@ export default function AICopilotPage() {
                   <Loader2 className="h-4 w-4 animate-spin text-white" />
                 </div>
                 <div className="rounded-2xl bg-[#ffffff05] px-4 py-3 text-sm text-slate-400">
-                  Thinking…
+                  Fetching live data &amp; thinking…
                 </div>
               </div>
             )}
@@ -179,7 +230,7 @@ export default function AICopilotPage() {
               disabled={loading}
               placeholder={
                 workspaceId
-                  ? "Ask anything about your workspace…"
+                  ? "Ask about repos, commits, issues, or anything in your workspace…"
                   : "Connect your wallet to start chatting…"
               }
               data-testid="input-copilot-message"
@@ -196,13 +247,93 @@ export default function AICopilotPage() {
           </form>
         </DashboardCard>
 
+        {/* Sidebar */}
         <div className="space-y-4">
+          {/* GitHub panel */}
+          <DashboardCard>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <SiGithub className="h-4 w-4 text-white" />
+                <h3 className="text-sm text-white">GitHub</h3>
+              </div>
+              {workspaceId && githubConnected && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => syncMut.mutate()}
+                  disabled={syncMut.isPending || !workspaceId}
+                  data-testid="button-github-sync"
+                  className="h-6 w-6 rounded p-0 text-slate-500 hover:text-white"
+                  title="Sync to memory"
+                >
+                  {syncMut.isPending
+                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                    : <RefreshCw className="h-3 w-3" />}
+                </Button>
+              )}
+            </div>
+
+            {!workspaceId ? (
+              <p className="mt-2 text-[11px] text-amber-400">Connect wallet to access GitHub</p>
+            ) : ghLoading ? (
+              <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                <Loader2 className="h-3 w-3 animate-spin" /> Loading repos…
+              </div>
+            ) : ghError || repos.length === 0 ? (
+              <div className="mt-3">
+                <p className="text-[11px] text-slate-500">
+                  {ghError ? "GitHub not connected." : "No repositories found."}
+                </p>
+                <a
+                  href="/integrations"
+                  className="mt-1 block text-[11px] text-violet-400 hover:text-violet-300 underline"
+                >
+                  Connect GitHub →
+                </a>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-2">
+                <p className="text-[10px] text-slate-500">{repos.length} repositories</p>
+                {repos.slice(0, 6).map((r) => (
+                  <a
+                    key={r.id}
+                    href={r.htmlUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-start justify-between gap-2 rounded-lg border border-[#ffffff0d] bg-[#ffffff05] p-2 transition-colors hover:bg-[#ffffff0d]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[11px] font-medium text-slate-300 group-hover:text-white">
+                        {r.name}
+                      </p>
+                      <div className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-600">
+                        {r.language && <span className="text-violet-400">{r.language}</span>}
+                        {r.openIssuesCount > 0 && (
+                          <span className="flex items-center gap-0.5">
+                            <CircleDot className="h-2.5 w-2.5 text-rose-400" />{r.openIssuesCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <ExternalLink className="h-3 w-3 shrink-0 text-slate-700 group-hover:text-slate-400" />
+                  </a>
+                ))}
+                {repos.length > 6 && (
+                  <p className="text-[10px] text-slate-600">+{repos.length - 6} more repos accessible</p>
+                )}
+              </div>
+            )}
+          </DashboardCard>
+
+          {/* Context sources */}
           <DashboardCard>
             <h3 className="text-sm text-white">Context sources</h3>
             <div className="mt-3 space-y-2 text-xs">
               {[
                 { icon: FileText, label: `${memoryCount} workspace memories` },
                 { icon: Zap, label: `${agentCount} active agents` },
+                { icon: SiGithub, label: repos.length > 0 ? `${repos.length} GitHub repos` : "GitHub not connected" },
                 { icon: Sparkles, label: "Gemini 2.5 Flash" },
               ].map((c) => {
                 const Icon = c.icon;
@@ -214,36 +345,59 @@ export default function AICopilotPage() {
                 );
               })}
             </div>
-            {!workspaceId && (
-              <p className="mt-3 text-[10px] text-amber-400">
-                Connect wallet to enable memory context
-              </p>
-            )}
           </DashboardCard>
 
-          <DashboardCard>
-            <h3 className="text-sm text-white">Tips</h3>
-            <ul className="mt-3 space-y-2 text-xs text-slate-400">
-              <li>Mention agent roles to scope analysis (DevOps, Privacy, Billing).</li>
-              <li>Copilot auto-stores conversations as memories.</li>
-              <li>Memories are AES-encrypted before 0G Storage.</li>
-            </ul>
-          </DashboardCard>
-
+          {/* Pipeline */}
           <DashboardCard>
             <h3 className="text-sm text-white">Pipeline</h3>
             <ol className="mt-3 space-y-1 text-[11px] text-slate-400">
-              {["Memory retrieval", "DevOps / Billing agents", "Gemini 2.5 Flash", "Privacy redaction"].map(
-                (step, i) => (
-                  <li key={step} className="flex items-center gap-2">
-                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-violet-400/20 text-[9px] text-violet-300">
-                      {i + 1}
-                    </span>
-                    {step}
-                  </li>
-                ),
-              )}
+              {[
+                "GitHub API fetch",
+                "Memory retrieval",
+                "DevOps / Billing agents",
+                "Gemini 2.5 Flash",
+                "Privacy redaction",
+              ].map((step, i) => (
+                <li key={step} className="flex items-center gap-2">
+                  <span className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] ${
+                    i === 0 ? "bg-emerald-400/20 text-emerald-300" : "bg-violet-400/20 text-violet-300"
+                  }`}>
+                    {i + 1}
+                  </span>
+                  {step}
+                  {i === 0 && (
+                    <span className="ml-auto text-[9px] text-emerald-500 font-medium">LIVE</span>
+                  )}
+                </li>
+              ))}
             </ol>
+          </DashboardCard>
+
+          {/* Quick queries */}
+          <DashboardCard>
+            <h3 className="text-sm text-white">Quick queries</h3>
+            <div className="mt-3 space-y-1.5">
+              {[
+                { icon: GitBranch, label: "List my repos", query: "What repositories are connected to my workspace?" },
+                { icon: GitCommit, label: "Recent commits", query: "Show me recent commits and summarize the activity" },
+                { icon: CircleDot, label: "Open issues", query: "List open issues and suggest which to prioritize" },
+                { icon: GitPullRequest, label: "Pull requests", query: "Show open pull requests — any that need review?" },
+              ].map((q) => {
+                const Icon = q.icon;
+                return (
+                  <button
+                    key={q.label}
+                    type="button"
+                    onClick={() => send(q.query)}
+                    disabled={loading}
+                    className="flex w-full items-center gap-2 rounded-lg border border-[#ffffff0d] bg-[#ffffff05] px-2.5 py-2 text-left text-[11px] text-slate-400 transition-colors hover:bg-[#ffffff0d] hover:text-white disabled:opacity-40"
+                  >
+                    <Icon className="h-3 w-3 shrink-0 text-violet-400" />
+                    {q.label}
+                  </button>
+                );
+              })}
+            </div>
           </DashboardCard>
         </div>
       </div>

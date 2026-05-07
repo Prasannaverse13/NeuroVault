@@ -12,6 +12,13 @@ import { uploadMemory, retrieveMemory, storageStatus } from "./lib/zeroGStorage"
 import { computeStatus } from "./lib/zeroGCompute";
 import { embed } from "./lib/embeddings";
 import { contractStatus, fetchOnchainAgent, txExplorerUrl, activeChain } from "./lib/contract";
+import {
+  getRepositories,
+  getRecentCommits,
+  getRepositoryIssues,
+  getPullRequests,
+  buildGitHubContext,
+} from "./lib/github";
 import { orchestrate } from "./orchestrator";
 import { runPrivacyAgent } from "./agents";
 import {
@@ -390,15 +397,40 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     const integrations = await storage.listIntegrations(workspaceId);
     const connectedIntegrations = integrations.filter((i) => i.status === "connected");
 
+    // ── GitHub live context injection ──────────────────────────
+    const ghIntegration = connectedIntegrations.find((i) => i.type === "github");
+    const isGithubQuery = /repo|repositor|commit|issue|pull\s*request|pr|branch|git|github|code|push|merge/i.test(message);
+    let githubContext: string | undefined;
+    let githubDataUsed = false;
+
+    if (ghIntegration?.config?.access_token) {
+      try {
+        // Always inject GitHub context for GitHub-related queries; also inject repo list for generic queries
+        const token = ghIntegration.config.access_token as string;
+        const pinnedRepo = ghIntegration.config.repo as string | undefined;
+        githubContext = await buildGitHubContext(token, pinnedRepo || undefined);
+        githubDataUsed = true;
+      } catch (err) {
+        console.warn("[copilot] GitHub context fetch failed:", err);
+        githubContext = `GitHub integration connected but data fetch failed: ${(err as Error).message}`;
+      }
+    }
+
+    const integrationLines: string[] = [];
+    if (connectedIntegrations.length > 0) {
+      integrationLines.push(`Connected integrations: ${connectedIntegrations.map((i) => i.name).join(", ")}`);
+    }
+    if (githubContext) {
+      integrationLines.push(`\n--- LIVE GITHUB DATA ---\n${githubContext}\n--- END GITHUB DATA ---`);
+    }
+
     const workflow = await orchestrate({
       workspaceId,
       query: message,
       memories: allMemories,
       usage: { apiCalls: history.length + 1, storageGb: allMemories.length * 0.001, vectorQueries: allMemories.length },
       chatHistory: history,
-      integrationContext: connectedIntegrations.length > 0
-        ? `Connected integrations: ${connectedIntegrations.map((i) => i.name).join(", ")}`
-        : undefined,
+      integrationContext: integrationLines.length > 0 ? integrationLines.join("\n") : undefined,
     });
 
     if (isGeminiConfigured()) {
@@ -435,7 +467,113 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       routedTo: workflow.routedTo,
       latencyMs: workflow.totalLatencyMs,
       memoryCount: allMemories.length,
+      githubDataUsed,
     };
+  }));
+
+  // ── /api/github ─────────────────────────────────────────────
+  const requireGithubToken = async (workspaceId: string) => {
+    const integration = await storage.getIntegrationByType(workspaceId, "github");
+    if (!integration) throw Object.assign(new Error("GitHub not connected. Connect GitHub from the Integrations page first."), { status: 404 });
+    const token = integration.config?.access_token as string | undefined;
+    if (!token) throw Object.assign(new Error("GitHub token missing in integration config"), { status: 400 });
+    return { token, repo: integration.config?.repo as string | undefined };
+  };
+
+  app.get("/api/github/repos", handle(async (req) => {
+    const workspaceId = String(req.query.workspaceId ?? "");
+    if (!workspaceId) throw new Error("workspaceId required");
+    const { token } = await requireGithubToken(workspaceId);
+    const repos = await getRepositories(token);
+    return { repos, total: repos.length, fetchedAt: new Date().toISOString() };
+  }));
+
+  app.get("/api/github/commits", handle(async (req) => {
+    const workspaceId = String(req.query.workspaceId ?? "");
+    const repo = String(req.query.repo ?? "");
+    if (!workspaceId || !repo) throw new Error("workspaceId and repo required");
+    const { token } = await requireGithubToken(workspaceId);
+    const commits = await getRecentCommits(token, repo, 20);
+    return { commits, repo, fetchedAt: new Date().toISOString() };
+  }));
+
+  app.get("/api/github/issues", handle(async (req) => {
+    const workspaceId = String(req.query.workspaceId ?? "");
+    const repo = String(req.query.repo ?? "");
+    const state = (req.query.state as "open" | "closed" | "all") ?? "open";
+    if (!workspaceId || !repo) throw new Error("workspaceId and repo required");
+    const { token } = await requireGithubToken(workspaceId);
+    const issues = await getRepositoryIssues(token, repo, { state, limit: 30 });
+    return { issues, repo, state, fetchedAt: new Date().toISOString() };
+  }));
+
+  app.get("/api/github/pulls", handle(async (req) => {
+    const workspaceId = String(req.query.workspaceId ?? "");
+    const repo = String(req.query.repo ?? "");
+    const state = (req.query.state as "open" | "closed" | "all") ?? "open";
+    if (!workspaceId || !repo) throw new Error("workspaceId and repo required");
+    const { token } = await requireGithubToken(workspaceId);
+    const pulls = await getPullRequests(token, repo, { state, limit: 30 });
+    return { pulls, repo, state, fetchedAt: new Date().toISOString() };
+  }));
+
+  // Sync GitHub repos + recent activity into workspace memory
+  app.post("/api/github/sync", handle(async (req) => {
+    const { workspaceId } = z.object({ workspaceId: z.string() }).parse(req.body);
+    const ws = await storage.getWorkspace(workspaceId);
+    if (!ws) throw Object.assign(new Error("workspace_not_found"), { status: 404 });
+    const { token, repo: pinnedRepo } = await requireGithubToken(workspaceId);
+
+    const repos = await getRepositories(token, { perPage: 30, sort: "updated" });
+    const agents = await storage.listAgents(workspaceId);
+    const agentId = agents[0]?.id ?? workspaceId;
+    let memoriesCreated = 0;
+    const syncedRepos: string[] = [];
+
+    for (const repo of repos.slice(0, 10)) {
+      try {
+        const [commits, issues, prs] = await Promise.all([
+          getRecentCommits(token, repo.fullName, 5),
+          getRepositoryIssues(token, repo.fullName, { state: "open", limit: 5 }),
+          getPullRequests(token, repo.fullName, { state: "open", limit: 5 }),
+        ]);
+
+        const summary = [
+          `GitHub repo: ${repo.fullName}`,
+          repo.description ? `Description: ${repo.description}` : "",
+          `Language: ${repo.language ?? "unknown"} | Stars: ${repo.stargazersCount} | Open issues: ${repo.openIssuesCount}`,
+          commits.length > 0 ? `Recent commits: ${commits.map((c) => `${c.sha} ${c.message}`).join("; ")}` : "",
+          issues.length > 0 ? `Open issues: ${issues.map((i) => `#${i.number} ${i.title}`).join("; ")}` : "",
+          prs.length > 0 ? `Open PRs: ${prs.map((p) => `#${p.number} ${p.title}`).join("; ")}` : "",
+        ].filter(Boolean).join("\n");
+
+        const { encrypt: enc } = await import("./lib/encryption");
+        await storage.createMemory({
+          workspaceId,
+          agentId,
+          type: "GitHub",
+          tags: ["github", "repository", repo.language?.toLowerCase() ?? "code"].filter(Boolean),
+          summary: `GitHub: ${repo.fullName} — ${repo.openIssuesCount} issues, ${commits.length} recent commits`,
+          encryptedPayload: enc(summary),
+          storageRef: null,
+          embedding: null,
+        });
+        memoriesCreated++;
+        syncedRepos.push(repo.fullName);
+      } catch {
+        // skip failing repos
+      }
+    }
+
+    await storage.appendAudit({
+      workspaceId,
+      actorWallet: ws.ownerWallet,
+      action: "github.sync",
+      targetType: "integration",
+      metadata: { repoCount: repos.length, memoriesCreated },
+    });
+
+    return { synced: repos.length, memoriesCreated, repos: syncedRepos };
   }));
 
   // ── /api/integrations ──────────────────────────────────────

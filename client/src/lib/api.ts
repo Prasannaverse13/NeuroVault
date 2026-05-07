@@ -103,6 +103,33 @@ export const api = {
 
   disconnectIntegration: (id: string): Promise<{ ok: boolean }> =>
     fetch(`/api/integrations/${id}`, { method: "DELETE" }).then((r) => r.json()),
+
+  // GitHub
+  githubRepos: (workspaceId: string) =>
+    fetch(`/api/github/repos?workspaceId=${workspaceId}`).then((r) => r.json()) as Promise<{
+      repos: Array<{
+        id: number; name: string; fullName: string; description: string | null;
+        language: string | null; stargazersCount: number; openIssuesCount: number;
+        updatedAt: string; htmlUrl: string; private: boolean;
+      }>;
+      total: number;
+    }>,
+
+  githubCommits: (workspaceId: string, repo: string) =>
+    fetch(`/api/github/commits?workspaceId=${workspaceId}&repo=${encodeURIComponent(repo)}`).then((r) => r.json()),
+
+  githubIssues: (workspaceId: string, repo: string, state?: string) =>
+    fetch(`/api/github/issues?workspaceId=${workspaceId}&repo=${encodeURIComponent(repo)}&state=${state ?? "open"}`).then((r) => r.json()),
+
+  githubPulls: (workspaceId: string, repo: string) =>
+    fetch(`/api/github/pulls?workspaceId=${workspaceId}&repo=${encodeURIComponent(repo)}`).then((r) => r.json()),
+
+  githubSync: (workspaceId: string) =>
+    fetch("/api/github/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspaceId }),
+    }).then((r) => r.json()) as Promise<{ synced: number; memoriesCreated: number; repos: string[] }>,
 };
 
 export const useWorkspaceId = (): string | null =>
