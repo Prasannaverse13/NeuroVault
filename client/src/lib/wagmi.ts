@@ -29,6 +29,6 @@ const projectId =
 export const wagmiConfig = getDefaultConfig({
   appName: "NeuroVault Enterprise",
   projectId,
-  chains: [zeroGGalileo, zeroGMainnet, mainnet],
+  chains: [zeroGMainnet, zeroGGalileo, mainnet],
   ssr: false,
 });

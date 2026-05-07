@@ -2,8 +2,8 @@
  * One-command deploy script for AgentRegistry to the 0G chain.
  *
  * Usage:
- *   ZG_PRIVATE_KEY=0x... ZG_CHAIN=0g-galileo npx tsx scripts/deploy.ts
- *   ZG_PRIVATE_KEY=0x... ZG_CHAIN=0g-mainnet npx tsx scripts/deploy.ts
+ *   ZG_PRIVATE_KEY=0x... npx tsx scripts/deploy.ts                        (mainnet — default)
+ *   ZG_PRIVATE_KEY=0x... ZG_CHAIN=0g-galileo npx tsx scripts/deploy.ts   (galileo testnet)
  *
  * Requires: solc (npm install -D solc)
  */
@@ -12,11 +12,11 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { CHAINS } from "../server/lib/contract";
 
-const chainKey = (process.env.ZG_CHAIN || "0g-galileo") as keyof typeof CHAINS;
+const chainKey = (process.env.ZG_CHAIN || "0g-mainnet") as keyof typeof CHAINS;
 const chain = CHAINS[chainKey];
 const pk = process.env.ZG_PRIVATE_KEY;
 
-if (!chain) throw new Error(`Unknown chain '${chainKey}'. Use 0g-galileo or 0g-mainnet.`);
+if (!chain) throw new Error(`Unknown chain '${chainKey}'. Use 0g-mainnet or 0g-galileo.`);
 if (!pk) throw new Error("Missing ZG_PRIVATE_KEY env var.");
 
 const compileContract = async (): Promise<{ abi: any[]; bytecode: string }> => {

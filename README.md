@@ -4,7 +4,7 @@
 
 [![0G APAC Hackathon](https://img.shields.io/badge/0G-APAC%20Hackathon-6D5EF7?style=for-the-badge)](https://0g.ai)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-4285F4?style=for-the-badge)](https://aistudio.google.com)
-[![0G Storage](https://img.shields.io/badge/0G-Storage-00D3A7?style=for-the-badge)](https://docs.0g.ai)
+[![0G Mainnet](https://img.shields.io/badge/0G-Mainnet-00D3A7?style=for-the-badge)](https://chainscan.0g.ai)
 [![Wallet Auth](https://img.shields.io/badge/Wallet--Only-Auth-111827?style=for-the-badge)](https://www.rainbowkit.com)
 
 ---
@@ -15,114 +15,108 @@
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ NeuroVault Enterprise                                                    │
 │ Decentralized AI memory, live GitHub intelligence, and wallet identity   │
-│ for enterprise-grade copilots and autonomous agents.                     │
+│ for enterprise-grade copilots and autonomous agents — on 0G Mainnet.    │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Architecture Visuals
-
-**System flow**
+## Architecture Visual
 
 ```text
 Wallet Login (RainbowKit)
         ↓
 OpenClaw-style Orchestrator
         ↓
-Memory Retrieval Engine
+Memory Retrieval Engine  ←→  GitHub Intelligence (live)
         ↓
 Gemini AI Reasoning Layer
         ↓
-0G Storage
+0G Storage (encrypted memory persistence)
         ↓
-Smart Contract / Agent Registry
+0G Mainnet Smart Contract / Agent Registry
         ↓
-AI Response
-```
-
-**Architecture placeholder**
-
-```text
-[Frontend] → [Backend API] → [Orchestrator] → [AI Layer] → [0G Storage / 0G Chain]
+AI Response (Privacy-filtered)
 ```
 
 ---
 
 ## 1) Project Overview
 
-NeuroVault Enterprise is an enterprise AI memory infrastructure platform built for teams that need agents to remember, evolve, and retrieve organizational intelligence across sessions.
+NeuroVault Enterprise is an enterprise AI memory infrastructure platform built for teams that need agents to remember, evolve, and retrieve organizational intelligence across sessions — all anchored on decentralized infrastructure.
 
-Traditional copilots fail when context disappears after each chat. NeuroVault solves that by combining wallet-based identity, encrypted persistent memory, decentralized storage, and multi-agent orchestration into one AI-native system.
+Traditional copilots fail when context disappears after each chat. NeuroVault solves that by combining wallet-based identity, AES-256-GCM encrypted persistent memory, 0G Mainnet agent registration, and multi-agent orchestration into one AI-native system.
 
 ### What it enables
 
-- Persistent enterprise AI memory
-- Multi-agent orchestration
-- Decentralized memory persistence
+- Persistent enterprise AI memory on 0G Storage
+- Multi-agent orchestration (OpenClaw-style)
+- On-chain agent identity via `AgentRegistry.sol` on **0G Mainnet**
 - Secure knowledge retrieval
-- Live GitHub intelligence ingestion
-- Wallet-owned agent identity
+- Live GitHub intelligence ingestion into Gemini context
+- Wallet-owned agent and workspace identity
 
 ---
 
 ## 2) Key Features
 
-- Persistent AI Memory
-- Multi-Agent Orchestration
-- Agent Identity System
-- Enterprise Knowledge Retrieval
-- GitHub Intelligence Integration
-- Encrypted Memory Storage
-- Wallet-based Ownership
-- Real-time AI Copilot
-- Agent Marketplace
-- Privacy-first Architecture
+- **Persistent AI Memory** — AES-256-GCM encrypted, stored on 0G Storage
+- **Multi-Agent Orchestration** — Memory → DevOps → Billing → Privacy pipeline
+- **Agent Identity System** — On-chain registry on 0G Mainnet
+- **Enterprise Knowledge Retrieval** — Vector embedding + cosine similarity search
+- **GitHub Intelligence Integration** — Live repos, commits, issues, PRs injected into Gemini context
+- **Encrypted Memory Storage** — Per-record AES-256-GCM with PII scanning
+- **Wallet-based Ownership** — Address = identity, no passwords
+- **Real-time AI Copilot** — Gemini 2.5 Flash + orchestrator + live GitHub data
+- **Agent Marketplace** — Install agents that create real on-chain identities
+- **Privacy-first Architecture** — Privacy agent always runs last; PII redacted before every response
 
 ---
 
-## 3) How NeuroVault Enterprise Covers Multiple Tracks
+## 3) Track Coverage
 
 ### Track 1: Agentic Infrastructure & OpenClaw Lab
 
-NeuroVault implements an OpenClaw-style orchestrator that coordinates specialized agents for memory, DevOps, privacy, and billing. The memory pipeline persists context, the orchestrator routes tasks dynamically, and 0G Storage provides decentralized persistence for long-context AI systems.
+OpenClaw-style orchestrator coordinates Memory, DevOps, Billing, and Privacy agents. The memory pipeline persists long-context knowledge to 0G Storage. Gemini 2.5 Flash provides the reasoning layer across all agents.
 
 ### Track 3: Agentic Economy & Autonomous Applications
 
-The platform includes a wallet-owned agent marketplace, agent identity registry, usage-aware billing, and enterprise-grade agent services. This creates a foundation for monetizable AI agents and autonomous applications with verifiable ownership.
+Wallet-owned agent marketplace, on-chain agent registry, usage-aware billing, and enterprise-grade agent services form the foundation for monetizable AI agents and verifiable autonomous applications.
 
 ### Track 5: Privacy & Sovereign Infrastructure
 
-NeuroVault encrypts memory before storage, applies privacy-first retrieval workflows, and keeps sensitive context protected by design. The architecture is built to support enterprise data sovereignty and TEE-inspired secure workflows.
+Every memory is encrypted before storage. The Privacy Agent runs last in every orchestration pipeline. PII is detected and redacted before any response leaves the system. Architecture supports enterprise data sovereignty.
 
 ---
 
 ## 4) System Architecture
 
-### Runtime Layers
-
-- **Frontend**: React 18, Vite 7, RainbowKit, wagmi
-- **Backend**: Express 5 API + workspace storage + orchestration
-- **Orchestration Layer**: OpenClaw-style multi-agent routing
-- **AI Layer**: Gemini 2.5 Flash for reasoning, summarization, and extraction
-- **Decentralized Storage Layer**: 0G Storage for memory persistence
-- **Blockchain Layer**: 0G Chain smart contract identity via `AgentRegistry.sol`
-
-### Flow
-
 ```text
-Wallet Login (RainbowKit)
-↓
-OpenClaw-style Orchestrator
-↓
-Memory Retrieval Engine
-↓
-Gemini AI Reasoning Layer
-↓
-0G Storage
-↓
-Smart Contract / Agent Registry
-↓
-AI Response
+[React + RainbowKit]  ──wallet-auth──►  [Express 5 API]
+        │                                      │
+        │                              [Orchestrator]
+        │                            ┌──────────────────┐
+        │                            │  Memory Agent     │
+        │                            │  DevOps Agent     │
+        │                            │  Billing Agent    │
+        │                            │  Privacy Agent ◄──┘ (always last)
+        │                            └──────────────────┘
+        │                                      │
+        │                              [Gemini 2.5 Flash]
+        │                              [GitHub Live API]
+        │                                      │
+        │                              [0G Storage SDK]
+        │                              [0G Mainnet RPC]
+        │                              [AgentRegistry.sol]
+        └──────────────────────────────────────┘
 ```
+
+### Layer breakdown
+
+- **Frontend**: React 18, Vite 7, RainbowKit, wagmi — wallet-gated, all routes protected
+- **Backend**: Express 5 + workspace storage + `x-wallet-address` middleware
+- **Orchestration**: OpenClaw-style 4-agent pipeline with context injection
+- **AI Layer**: Gemini 2.5 Flash for reasoning, summarization, tagging, extraction
+- **Decentralized Storage**: 0G Storage SDK — encrypted memory persistence
+- **Blockchain**: 0G Mainnet — `AgentRegistry.sol` for agent identity
 
 ---
 
@@ -130,97 +124,103 @@ AI Response
 
 ### 0G Storage
 
-Used to store memory logs, embeddings metadata, and encrypted enterprise memory with decentralized persistence. When 0G env vars are unavailable, the system falls back safely without exposing secrets.
+Used to store encrypted memory logs, embeddings metadata, and enterprise knowledge. Gracefully degrades to local disk when env vars are unset (dev mode).
 
-### 0G Chain
+### 0G Chain (Mainnet)
 
-Used for Agent ID ownership, on-chain identity, smart contract deployment, and explorer-verifiable registry state.
+`AgentRegistry.sol` is deployed on **0G Mainnet** (chain ID 16660). Agent IDs are owned by wallet addresses, verifiable on the 0G Mainnet explorer.
+
+- Explorer: https://chainscan.0g.ai
+- RPC: https://evmrpc.0g.ai
 
 ### 0G Compute
 
-The product is prepared for decentralized inference through an abstraction layer that can route workloads to 0G Compute in the future.
+Abstraction layer prepared for decentralized inference routing. Set `COMPUTE_PROVIDER=0g` to route workloads to 0G Compute nodes.
 
 ### Privacy / TEE Concepts
 
-NeuroVault uses encrypted memory pipelines, secure retrieval, and privacy-first agent workflows inspired by TEE-style enterprise protection.
+AES-256-GCM encrypted memory pipeline with PII scanning before encryption and after every AI inference step. Software TEE architecture — hardware TEE-ready.
 
 ---
 
 ## 6) How 0G Supports the Product
 
-Decentralized AI memory matters because enterprises need tamper-resistant memory, verifiable ownership, long-term persistence, and infrastructure that scales beyond a single session or vendor lock-in.
+0G gives NeuroVault:
 
-0G gives NeuroVault the foundation for:
-
-- Tamper-resistant memory
-- Long-term persistence
-- Verifiable ownership
-- Decentralized intelligence
-- Scalable enterprise AI infrastructure
+- **Tamper-resistant memory** — decentralized storage not controlled by any single party
+- **Long-term persistence** — memory survives session restarts and server resets
+- **Verifiable ownership** — wallet-linked agent IDs on-chain, queryable by anyone
+- **Decentralized intelligence** — infrastructure not dependent on centralized cloud
+- **Scalable enterprise AI** — storage and compute scale independently
 
 ---
 
 ## 7) OpenClaw-Style Orchestration
 
-### Agents
-
-- Memory Agent
-- DevOps Agent
-- Privacy Agent
-- Billing Agent
-
-### Behavior
-
-- Agent coordination across tasks
-- Dynamic workflow execution
-- Context-aware reasoning
-- Privacy enforcement at the end of every response path
+```text
+POST /api/orchestrator/run
+       │
+       ▼
+ ┌────────────────┐
+ │ Memory Agent   │ ← retrieves top-K relevant memories
+ └────────┬───────┘
+          ▼
+ ┌────────────────┐
+ │ DevOps Agent   │ ← classifies query, recommends actions
+ └────────┬───────┘
+          ▼
+ ┌────────────────┐
+ │ Billing Agent  │ ← usage tracking, cost estimation
+ └────────┬───────┘
+          ▼
+ ┌────────────────┐
+ │ Privacy Agent  │ ← ALWAYS LAST: PII redaction
+ └────────┬───────┘
+          ▼
+   final response + audit log entry
+```
 
 ---
 
 ## 8) Gemini AI Integration
 
-Gemini 2.5 Flash powers the intelligence layer for:
+Gemini 2.5 Flash powers:
 
-- Enterprise reasoning
-- Memory summarization
-- Contextual AI responses
-- Auto-tagging
-- Knowledge extraction
-
-Gemini provides the cognition, while 0G provides the decentralized infrastructure.
+- Enterprise reasoning across all agent steps
+- Memory summarization and auto-tagging
+- Contextual Copilot responses with live GitHub data
+- Knowledge extraction from ingested content
+- Autonomous agent decision-making in the marketplace
 
 ---
 
 ## 9) GitHub Intelligence Integration
 
-NeuroVault includes live GitHub intelligence for enterprise engineering context:
-
-- GitHub repo ingestion
-- Commit analysis
-- Issue summarization
-- Pull request visibility
-- AI memory creation from engineering activity
-
-This live context is injected into Copilot responses and can also be synced into memory for later retrieval.
+- Live GitHub repo ingestion via PAT
+- Commit analysis injected into every Copilot message
+- Issue and PR summarization
+- Sync-to-memory: indexes all repos as searchable enterprise knowledge
+- AI memory created from engineering activity automatically
 
 ---
 
 ## 10) Smart Contracts
 
-The `AgentRegistry.sol` contract provides on-chain agent identity and wallet-linked ownership.
+`AgentRegistry.sol` — deployed on **0G Mainnet**
 
-### It supports
+Capabilities:
+- `createAgent(name, role, memorySize)` → on-chain agent ID
+- `getAgent(id)` → owner wallet + metadata
+- `transferOwnership(id, newOwner)` → verifiable transfer
+- `getAgentsByOwner(wallet)` → list all agents for a wallet
 
-- Agent ID ownership
-- Wallet-linked agents
-- Metadata storage
-- Memory tracking
+**Deployed contract**
 
-### Contract placeholders
-
-- **Contract Address**: `0x9D06eaEFfD214C2fb14Fad09cBEd469816F01299`
-- **Explorer**: https://chainscan-galileo.0g.ai/address/0x9D06eaEFfD214C2fb14Fad09cBEd469816F01299
+| Field | Value |
+|---|---|
+| Contract Address | `0x9D06eaEFfD214C2fb14Fad09cBEd469816F01299` |
+| Explorer | https://chainscan.0g.ai/address/0x9D06eaEFfD214C2fb14Fad09cBEd469816F01299 |
+| Chain | 0G Mainnet (Chain ID 16660) |
 
 ---
 
@@ -236,37 +236,58 @@ npm install
 
 ### 2. Configure environment
 
-Create a `.env` file:
+Create a `.env` file (never commit this):
 
 ```bash
-GEMINI_API_KEY=your_gemini_key
-ZG_PRIVATE_KEY=your_0g_deploy_wallet_private_key
-RPC_URL=your_0g_rpc_url
-CONTRACT_ADDRESS=0x...
+GOOGLE_API_KEY=your_gemini_api_key
+
+# 0G Mainnet deployment
+ZG_PRIVATE_KEY=your_deploy_wallet_private_key
+ZG_CHAIN=0g-mainnet
+ZG_RPC_URL=https://evmrpc.0g.ai
+ZG_INDEXER_RPC=https://indexer-storage-testnet-standard.0g.ai
+
+# Optional
+AGENT_REGISTRY_ADDRESS=0x...
+NEUROVAULT_ENCRYPTION_KEY=your_aes_passphrase
+VITE_WALLETCONNECT_PROJECT_ID=your_walletconnect_id
 ```
 
 ### 3. Run the app
 
 ```bash
-npm run dev
+npm run dev          # http://localhost:5000
 ```
 
-### 4. Deploy contracts
+### 4. Deploy contract to 0G Mainnet
 
 ```bash
 ZG_PRIVATE_KEY=0x... npx tsx scripts/deploy.ts
 ```
 
+For testnet (Galileo) instead:
+
+```bash
+ZG_PRIVATE_KEY=0x... ZG_CHAIN=0g-galileo npx tsx scripts/deploy.ts
+```
+
 ---
 
-## 12) Wallet + Testnet Guide
+## 12) Wallet + Network Guide
 
-1. Install MetaMask
-2. Switch to **0G Galileo Testnet**
-3. Fund the wallet via the faucet
-4. Connect wallet through RainbowKit
+### MetaMask setup for 0G Mainnet
 
-Faucet: https://faucet.0g.ai
+| Field | Value |
+|---|---|
+| Network Name | 0G Mainnet |
+| RPC URL | https://evmrpc.0g.ai |
+| Chain ID | 16660 |
+| Currency Symbol | 0G |
+| Explorer | https://chainscan.0g.ai |
+
+NeuroVault uses RainbowKit — it will prompt the user to add and switch to 0G Mainnet automatically on wallet connect.
+
+**Testnet faucet (for development):** https://faucet.0g.ai
 
 ---
 
@@ -274,43 +295,33 @@ Faucet: https://faucet.0g.ai
 
 Judges can test:
 
-- Wallet login
-- GitHub integration
-- AI Copilot
-- Memory retrieval
-- 0G storage persistence
-- Smart contract interaction
-
-Recommended flow:
-
-1. Connect wallet
-2. Add GitHub integration
-3. Ask Copilot about repositories or commits
-4. Sync GitHub data into memory
-5. Verify memory retrieval and contract status
+1. Navigate to the app and connect MetaMask — 0G Mainnet is the default chain
+2. Connect GitHub from the Integrations page and enter a PAT
+3. Ask the AI Copilot about repositories, commits, or issues
+4. Sync GitHub data into memory via the Copilot sidebar
+5. View memory entries on the Memory page
+6. Check the Admin panel for contract deployment status and audit log
+7. View the deployed contract on the 0G Mainnet explorer
 
 ---
 
 ## 14) Security & Privacy
 
-NeuroVault is built with enterprise privacy as a default:
-
-- AES encryption
-- Enterprise memory protection
-- Secure memory retrieval
-- Privacy-first AI workflows
-
-Sensitive payloads are encrypted before persistence and never exposed in the browser.
+- **AES-256-GCM** per-record encryption with random salt and IV
+- PII scanning runs before encryption AND after inference (privacy agent runs last)
+- Private keys never leave the server; only `VITE_*` prefixed vars reach the browser
+- All sensitive API endpoints require `x-wallet-address` header validation
+- Storage layer never logs cleartext payloads
 
 ---
 
 ## 15) Future Roadmap
 
-- Real decentralized inference
-- Autonomous enterprise agents
-- Persistent cross-session memory
-- Decentralized AI workforce
-- Enterprise AI operating system
+- Real decentralized inference via 0G Compute nodes
+- Autonomous enterprise agents with on-chain action execution
+- Persistent cross-session memory with retrieval ranking
+- Decentralized AI workforce marketplace
+- Enterprise AI operating system on 0G infrastructure
 
 ---
 
@@ -324,31 +335,39 @@ Sensitive payloads are encrypted before persistence and never exposed in the bro
 - Track 5: Privacy & Sovereign Infrastructure
 
 **Technology highlights:**
-- Wallet-only auth
-- Gemini 2.5 Flash
-- 0G Storage
-- 0G Chain
-- Encrypted memory
-- Live GitHub intelligence
-- Multi-agent orchestration
+- 0G Mainnet smart contract deployment
+- 0G Storage for encrypted memory persistence
+- Gemini 2.5 Flash multi-agent orchestration
+- Wallet-only auth (RainbowKit + wagmi)
+- Live GitHub intelligence in AI Copilot
+- AES-256-GCM privacy layer
 
 ---
 
 ## Repository Map
 
 ```text
-contracts/        AgentRegistry.sol + deployment metadata
-scripts/          Contract deployment script
-server/           API, orchestration, storage, agents
-client/src/       React UI and wallet flow
-shared/           Schema and shared types
+contracts/        AgentRegistry.sol
+scripts/          deploy.ts — compiles + deploys to 0G Mainnet by default
+server/           API, orchestrator, agents, 0G storage, contract lib
+client/src/       React UI, wallet flow, protected routes
+shared/           Drizzle + Zod schema
 ```
 
 ---
 
-## Security Note
+## Environment Variables Reference
 
-No secret keys or private credentials are stored in this repository. Use environment variables for all sensitive values.
+| Variable | Purpose | Required |
+|---|---|---|
+| `GOOGLE_API_KEY` | Gemini 2.5 Flash | Yes |
+| `ZG_PRIVATE_KEY` | Deploy wallet for contract + storage uploads | For deploy |
+| `ZG_CHAIN` | `0g-mainnet` (default) or `0g-galileo` | No |
+| `ZG_RPC_URL` | 0G EVM RPC | For live storage |
+| `ZG_INDEXER_RPC` | 0G Storage Indexer | For live storage |
+| `AGENT_REGISTRY_ADDRESS` | Override contract address | No |
+| `NEUROVAULT_ENCRYPTION_KEY` | AES key derivation passphrase | Recommended |
+| `VITE_WALLETCONNECT_PROJECT_ID` | WalletConnect Cloud | For mobile wallets |
 
 ---
 

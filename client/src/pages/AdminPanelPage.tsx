@@ -222,7 +222,7 @@ export default function AdminPanelPage() {
         {/* Contract deploy panel */}
         {!contract?.configured && (
           <div className="mt-4 rounded-lg border border-violet-400/20 bg-violet-400/5 p-4">
-            <p className="text-sm font-medium text-white">Deploy AgentRegistry to 0G Galileo Testnet</p>
+            <p className="text-sm font-medium text-white">Deploy AgentRegistry to 0G Mainnet</p>
             <p className="mt-2 text-[11px] text-slate-400">
               Deployer wallet:{" "}
               <span className="font-mono text-violet-300">
@@ -231,13 +231,9 @@ export default function AdminPanelPage() {
             </p>
             <p className="mt-1 text-[11px] text-slate-500">
               {health?.deployWallet
-                ? <>Fund the wallet above with testnet A0GI from{" "}</>
-                : <>1. Add <span className="font-mono text-slate-400">ZG_PRIVATE_KEY</span> secret &nbsp;2. Get testnet A0GI from{" "}</>
+                ? <>Fund the wallet above with 0G on mainnet, then click Deploy Contract.</>
+                : <>1. Add <span className="font-mono text-slate-400">ZG_PRIVATE_KEY</span> secret &nbsp;2. Fund the wallet with 0G (testnet: <a href="https://faucet.0g.ai" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline hover:text-cyan-300">faucet.0g.ai</a>) &nbsp;3. Click Deploy Contract</>
               }
-              <a href="https://faucet.0g.ai" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline hover:text-cyan-300">
-                faucet.0g.ai
-              </a>{" "}
-              3. Click Deploy Contract
             </p>
             {deployLog && (
               <pre className="mt-3 rounded bg-[#0a0a12] p-3 font-mono text-[10px] text-slate-300 whitespace-pre-wrap">

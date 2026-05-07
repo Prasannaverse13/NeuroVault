@@ -36,8 +36,8 @@ export const CHAINS: Record<string, ChainConfig> = {
   },
 };
 
-const activeChainKey = (process.env.ZG_CHAIN || "0g-galileo") as keyof typeof CHAINS;
-export const activeChain: ChainConfig = CHAINS[activeChainKey] ?? CHAINS["0g-galileo"];
+const activeChainKey = (process.env.ZG_CHAIN || "0g-mainnet") as keyof typeof CHAINS;
+export const activeChain: ChainConfig = CHAINS[activeChainKey] ?? CHAINS["0g-mainnet"];
 
 let cachedAddress: string | null = null;
 

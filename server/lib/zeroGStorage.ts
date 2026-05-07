@@ -64,7 +64,7 @@ export const uploadMemory = async (memory: MemoryObject): Promise<UploadResult> 
       backend: "0g",
       txHash: tx?.txHash,
       explorerUrl: tx?.txHash
-        ? `https://chainscan-galileo.0g.ai/tx/${tx.txHash}`
+        ? `https://chainscan.0g.ai/tx/${tx.txHash}`
         : undefined,
     };
   } catch (err) {
