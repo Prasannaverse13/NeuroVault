@@ -1,0 +1,142 @@
+Implement strict wallet-based authentication and protected routing across the entire NeuroVault Enterprise platform.
+
+CRITICAL REQUIREMENT:
+Users must NOT be able to access the platform unless they connect their wallet using RainbowKit + MetaMask.
+
+==================================================
+AUTHENTICATION RULES
+====================
+
+ONLY allow authentication using:
+
+* RainbowKit
+* wagmi
+* MetaMask
+
+NO:
+
+* guest access
+* public dashboard access
+* bypass routes
+* local mock auth
+* Google auth
+* email auth
+
+==================================================
+PROTECTED ACCESS FLOW
+=====================
+
+Required flow:
+
+Landing Page
+↓
+Connect Wallet Button
+↓
+MetaMask Connection
+↓
+Wallet Signature Verification
+↓
+Authenticated Session
+↓
+Access Platform
+
+If wallet is NOT connected:
+
+* redirect user to landing/auth page
+* block all dashboard routes
+* block APIs
+* block integrations
+* block AI copilot
+
+==================================================
+PROTECTED ROUTES
+================
+
+Protect ALL routes:
+
+/dashboard
+/create-agent
+/marketplace
+/memory
+/ai-copilot
+/integrations
+/wallet-billing
+/privacy-security
+/admin
+
+Users without wallet connection must NEVER access these routes.
+
+==================================================
+SESSION MANAGEMENT
+==================
+
+Implement:
+
+* wallet session persistence
+* automatic reconnect
+* disconnect functionality
+* session validation
+
+When user refreshes:
+
+* maintain authenticated wallet session
+
+When disconnected:
+
+* immediately revoke access
+
+==================================================
+WALLET VERIFICATION
+===================
+
+After wallet connect:
+
+1. Request wallet signature
+2. Verify ownership
+3. Create authenticated session
+4. Store wallet address securely
+
+==================================================
+AUTH GUARD SYSTEM
+=================
+
+Create:
+
+* AuthProvider
+* ProtectedRoute middleware
+* Wallet session checker
+* Unauthorized redirect handler
+
+==================================================
+UNAUTHORIZED EXPERIENCE
+=======================
+
+If user tries accessing protected pages without wallet:
+
+Show premium unauthorized screen:
+
+* “Connect Wallet to Access NeuroVault Enterprise”
+* subtle futuristic UI
+* disabled preview cards
+* Connect Wallet CTA
+
+==================================================
+BACKEND API SECURITY
+====================
+
+Protect backend APIs:
+
+* validate wallet session
+* reject unauthorized requests
+* secure integrations endpoints
+* secure memory APIs
+
+==================================================
+IMPORTANT
+=========
+
+The platform must feel like:
+“Enterprise-grade decentralized AI infrastructure with wallet-gated access.”
+
+No public access allowed after implementation.
+All enterprise functionality must require wallet authentication.
