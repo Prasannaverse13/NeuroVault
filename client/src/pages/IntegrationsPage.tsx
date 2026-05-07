@@ -21,27 +21,25 @@ import { api, useWorkspaceId } from "@/lib/api";
 import type { Integration } from "@shared/schema";
 import { useAccount } from "wagmi";
 
-// ── Catalog ────────────────────────────────────────────────────────────────
-// live = true → fully supported; live = false → coming soon
 const CATALOG = [
   {
     id: "github", name: "GitHub", category: "DevOps", icon: SiGithub, live: true,
     fields: [
-      { key: "access_token", label: "Personal Access Token", placeholder: "ghp_... or github_pat_...", secret: true },
-      { key: "repo",         label: "Repository (optional)", placeholder: "org/repo",                  secret: false },
+      { key: "access_token", label: "Personal Access Token", placeholder: "GitHub PAT", secret: true },
+      { key: "repo", label: "Repository (optional)", placeholder: "org/repo", secret: false },
     ],
   },
-  { id: "slack",      name: "Slack",      category: "Communication", icon: SiSlack,      live: false, fields: [] },
-  { id: "notion",     name: "Notion",     category: "Knowledge",     icon: SiNotion,     live: false, fields: [] },
-  { id: "linear",     name: "Linear",     category: "Project mgmt",  icon: SiLinear,     live: false, fields: [] },
-  { id: "hubspot",    name: "HubSpot",    category: "CRM",           icon: SiHubspot,    live: false, fields: [] },
-  { id: "stripe",     name: "Stripe",     category: "Payments",      icon: SiStripe,     live: false, fields: [] },
-  { id: "zendesk",    name: "Zendesk",    category: "Support",       icon: SiZendesk,    live: false, fields: [] },
-  { id: "openai",     name: "OpenAI",     category: "Models",        icon: SiOpenai,     live: false, fields: [] },
-  { id: "salesforce", name: "Salesforce", category: "CRM",           icon: SiSalesforce, live: false, fields: [] },
-  { id: "airtable",   name: "Airtable",   category: "Data",          icon: SiAirtable,   live: false, fields: [] },
-  { id: "postgres",   name: "Postgres",   category: "Data",          icon: SiPostgresql, live: false, fields: [] },
-  { id: "snowflake",  name: "Snowflake",  category: "Data",          icon: SiSnowflake,  live: false, fields: [] },
+  { id: "slack", name: "Slack", category: "Communication", icon: SiSlack, live: false, fields: [] },
+  { id: "notion", name: "Notion", category: "Knowledge", icon: SiNotion, live: false, fields: [] },
+  { id: "linear", name: "Linear", category: "Project mgmt", icon: SiLinear, live: false, fields: [] },
+  { id: "hubspot", name: "HubSpot", category: "CRM", icon: SiHubspot, live: false, fields: [] },
+  { id: "stripe", name: "Stripe", category: "Payments", icon: SiStripe, live: false, fields: [] },
+  { id: "zendesk", name: "Zendesk", category: "Support", icon: SiZendesk, live: false, fields: [] },
+  { id: "openai", name: "OpenAI", category: "Models", icon: SiOpenai, live: false, fields: [] },
+  { id: "salesforce", name: "Salesforce", category: "CRM", icon: SiSalesforce, live: false, fields: [] },
+  { id: "airtable", name: "Airtable", category: "Data", icon: SiAirtable, live: false, fields: [] },
+  { id: "postgres", name: "Postgres", category: "Data", icon: SiPostgresql, live: false, fields: [] },
+  { id: "snowflake", name: "Snowflake", category: "Data", icon: SiSnowflake, live: false, fields: [] },
 ] as const;
 
 type CatalogItem = typeof CATALOG[number];
@@ -56,7 +54,7 @@ export default function IntegrationsPage() {
   const [modal, setModal] = useState<LiveCatalogItem | null>(null);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
 
-  const { data, isLoading } = useQuery({
+  const { data } = useQuery({
     queryKey: ["/api/integrations", workspaceId],
     queryFn: () => api.listIntegrations(workspaceId!),
     enabled: !!workspaceId,
@@ -67,7 +65,6 @@ export default function IntegrationsPage() {
   const connectedByType = Object.fromEntries(connected.map((i) => [i.type, i]));
   const connectedCount = connected.filter((i) => i.status === "connected").length;
 
-  // ── Connect ───────────────────────────────────────────────────────────────
   const connectMut = useMutation({
     mutationFn: (vars: { item: LiveCatalogItem; config: Record<string, string> }) =>
       api.connectIntegration({
@@ -94,7 +91,6 @@ export default function IntegrationsPage() {
     onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
   });
 
-  // ── Re-test ───────────────────────────────────────────────────────────────
   const testMut = useMutation({
     mutationFn: (id: string) => api.testIntegration(id),
     onSuccess: (result) => {
@@ -107,7 +103,6 @@ export default function IntegrationsPage() {
     },
   });
 
-  // ── Disconnect ────────────────────────────────────────────────────────────
   const disconnectMut = useMutation({
     mutationFn: (id: string) => api.disconnectIntegration(id),
     onSuccess: () => {
@@ -131,21 +126,17 @@ export default function IntegrationsPage() {
   };
 
   return (
-    <DashboardLayout
-      title="Integrations"
-      subtitle={`${connectedCount} connected • ${CATALOG.length} available`}
-    >
+    <DashboardLayout title="Integrations" subtitle={`${connectedCount} connected • ${CATALOG.length} available`}>
       {!workspaceId && (
         <div className="mb-6 rounded-lg border border-amber-400/20 bg-amber-400/10 p-4 text-center text-sm text-amber-300">
           Connect your wallet to manage integrations.
         </div>
       )}
 
-      {/* Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {CATALOG.map((item) => {
           const Icon = item.icon;
-          const integration = connectedByType[item.id as string];
+          const integration = connectedByType[item.id];
           const isConnected = integration?.status === "connected";
           const hasError = integration?.status === "error";
 
@@ -167,9 +158,7 @@ export default function IntegrationsPage() {
                   </Badge>
                 </div>
                 <div className="mt-4">
-                  <div
-                    className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#ffffff0d] bg-[#ffffff05] py-2 text-xs text-slate-600 cursor-not-allowed select-none"
-                  >
+                  <div className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#ffffff0d] bg-[#ffffff05] py-2 text-xs text-slate-600 cursor-not-allowed select-none">
                     <Lock className="h-3 w-3" /> Coming soon
                   </div>
                 </div>
@@ -263,7 +252,6 @@ export default function IntegrationsPage() {
         })}
       </div>
 
-      {/* Connect Modal */}
       <Dialog open={!!modal} onOpenChange={(open) => { if (!open) { setModal(null); setFormValues({}); } }}>
         <DialogContent className="border border-[#ffffff14] bg-[#0d0d14] text-white sm:max-w-md">
           <DialogHeader>
@@ -290,22 +278,6 @@ export default function IntegrationsPage() {
                 />
               </div>
             ))}
-
-            {modal?.id === "github" && (
-              <div className="rounded-lg border border-violet-400/10 bg-violet-400/5 p-3 text-[11px] text-slate-400 leading-relaxed">
-                Generate a token at{" "}
-                <a
-                  href="https://github.com/settings/tokens"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-violet-300 underline hover:text-violet-200"
-                >
-                  github.com/settings/tokens
-                </a>
-                . Classic PAT: needs <span className="font-mono text-slate-300">repo</span> scope.
-                Fine-grained PAT: needs repository read access.
-              </div>
-            )}
 
             <div className="rounded-lg border border-[#ffffff0d] bg-[#ffffff05] p-3 text-[11px] text-slate-500">
               Credentials are encrypted at rest and never exposed to the frontend. The connection is tested live before saving.
