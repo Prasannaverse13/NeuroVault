@@ -1,1 +1,9 @@
-{}
+{
+  "0g-mainnet": {
+    "AgentRegistry": "0x2F94fB471A7b4F054D70BC670B75e7b878EF3764",
+    "txHash": "0x26105d507e9d045161187379fe2f27d24d435490eb380849ee8de91377c942bd",
+    "explorerUrl": "https://chainscan.0g.ai/address/0x2F94fB471A7b4F054D70BC670B75e7b878EF3764",
+    "deployedAt": "2026-05-08T09:09:16.887Z",
+    "deployerWallet": "0xB80232b4395e9cb595856F869614d49a58da8B1b"
+  }
+}
