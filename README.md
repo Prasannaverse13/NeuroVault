@@ -149,9 +149,8 @@ K --> O
 ### System Flow
 
 ```
-User Query → Wallet Auth → Orchestrator → Agent Pipeline → Gemini Inference
-                                                                  ↓
-Response ← 0G Storage ← Privacy Sweep (ALWAYS LAST) ← Draft Response
+<img width="1787" height="2387" alt="image" src="https://github.com/user-attachments/assets/dd4f5931-63ec-4b15-ac9e-b584df24f42a" />
+
 ```
 
 ### Layer Breakdown
