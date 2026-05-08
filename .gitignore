@@ -4,3 +4,15 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Runtime / generated
+.0g-fallback-cache/
+contracts/deployments.json
+
+# Replit agent context files
+attached_assets/
+.local/
+.cache/
+.upm/
+.config/
+.agents/
