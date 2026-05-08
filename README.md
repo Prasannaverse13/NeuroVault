@@ -124,7 +124,7 @@ Every memory is encrypted before storage. The Privacy Agent runs last in every o
 
 ### 0G Storage
 
-Used to store encrypted memory logs, embeddings metadata, and enterprise knowledge. Gracefully degrades to local disk when env vars are unset (dev mode).
+Used to store encrypted memory logs, embeddings metadata, and enterprise knowledge. Active whenever `ZG_PRIVATE_KEY` is set — public mainnet endpoints (`https://evmrpc.0g.ai`, indexer `https://indexer-storage.0g.ai`) are used by default, so no extra RPC env vars are needed. Gracefully degrades to local disk only when `ZG_PRIVATE_KEY` is absent.
 
 ### 0G Chain (Mainnet)
 
@@ -361,11 +361,11 @@ shared/           Drizzle + Zod schema
 | Variable | Purpose | Required |
 |---|---|---|
 | `GOOGLE_API_KEY` | Gemini 2.5 Flash | Yes |
-| `ZG_PRIVATE_KEY` | Deploy wallet for contract + storage uploads | For deploy |
+| `ZG_PRIVATE_KEY` | Funded 0G wallet — activates both Storage uploads and contract deploy | For storage + deploy |
 | `ZG_CHAIN` | `0g-mainnet` (default) or `0g-galileo` | No |
-| `ZG_RPC_URL` | 0G EVM RPC | For live storage |
-| `ZG_INDEXER_RPC` | 0G Storage Indexer | For live storage |
-| `AGENT_REGISTRY_ADDRESS` | Override contract address | No |
+| `ZG_RPC_URL` | Override 0G EVM RPC (default: `https://evmrpc.0g.ai`) | No |
+| `ZG_INDEXER_RPC` | Override 0G Storage Indexer (default: `https://indexer-storage.0g.ai`) | No |
+| `AGENT_REGISTRY_ADDRESS` | Override deployed contract address | No |
 | `NEUROVAULT_ENCRYPTION_KEY` | AES key derivation passphrase | Recommended |
 | `VITE_WALLETCONNECT_PROJECT_ID` | WalletConnect Cloud | For mobile wallets |
 

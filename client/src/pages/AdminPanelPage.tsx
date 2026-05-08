@@ -101,12 +101,12 @@ export default function AdminPanelPage() {
       label: "0G Storage",
       sublabel: storageSt?.configured
         ? `Connected · ${storageSt.endpoint}`
-        : "Local fallback cache active (ZG_* env vars not set)",
-      ok: true,
+        : "Local fallback cache active — add ZG_PRIVATE_KEY to enable 0G Storage",
+      ok: storageSt?.configured ?? false,
       pending: !storageSt?.configured,
       detail: storageSt?.configured
-        ? "0G Indexer + Storage node connected"
-        : "Set ZG_RPC_URL + ZG_INDEXER_RPC + ZG_PRIVATE_KEY secrets to activate live 0G Storage",
+        ? `0G Indexer: ${storageSt.endpoint} · RPC: ${(storageSt as any).rpcUrl}`
+        : "Set ZG_PRIVATE_KEY secret to activate 0G Storage. Public mainnet RPC endpoints are used by default.",
     },
     {
       key: "contract",

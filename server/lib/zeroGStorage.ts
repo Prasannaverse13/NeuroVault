@@ -5,6 +5,10 @@ import type { MemoryObject } from "@shared/schema";
 
 const FALLBACK_DIR = path.resolve(process.cwd(), ".0g-fallback-cache");
 
+// Public 0G mainnet defaults — no extra env vars needed when ZG_PRIVATE_KEY is set
+const ZG_RPC_URL     = process.env.ZG_RPC_URL      || "https://evmrpc.0g.ai";
+const ZG_INDEXER_RPC = process.env.ZG_INDEXER_RPC  || "https://indexer-storage.0g.ai";
+
 export interface UploadResult {
   storageRef: string;
   backend: "0g" | "local-fallback";
@@ -12,8 +16,8 @@ export interface UploadResult {
   explorerUrl?: string;
 }
 
-const isConfigured = (): boolean =>
-  Boolean(process.env.ZG_RPC_URL && process.env.ZG_PRIVATE_KEY && process.env.ZG_INDEXER_RPC);
+// Storage is considered active whenever a private key is available (RPC URLs have defaults)
+const isConfigured = (): boolean => Boolean(process.env.ZG_PRIVATE_KEY);
 
 let zgClient: any = null;
 
@@ -23,7 +27,7 @@ const initZeroG = async (): Promise<any> => {
   try {
     const sdk = await import("@0glabs/0g-ts-sdk");
     const { Indexer } = sdk as any;
-    zgClient = new Indexer(process.env.ZG_INDEXER_RPC!);
+    zgClient = new Indexer(ZG_INDEXER_RPC);
     return zgClient;
   } catch (err) {
     console.warn("[0g-storage] SDK init failed, using local fallback:", err);
@@ -57,7 +61,7 @@ export const uploadMemory = async (memory: MemoryObject): Promise<UploadResult> 
     const { Blob } = sdk as any;
     const json = JSON.stringify(memory);
     const blob = new Blob(Buffer.from(json, "utf8"));
-    const [tx, err] = await client.upload(blob, process.env.ZG_RPC_URL, process.env.ZG_PRIVATE_KEY);
+    const [tx, err] = await client.upload(blob, ZG_RPC_URL, process.env.ZG_PRIVATE_KEY);
     if (err) throw err;
     return {
       storageRef: tx?.rootHash ?? tx?.toString?.() ?? "0g-uploaded",
@@ -98,5 +102,6 @@ export const listFallbackMemories = async (): Promise<string[]> => {
 export const storageStatus = () => ({
   backend: isConfigured() ? "0g" : "local-fallback",
   configured: isConfigured(),
-  endpoint: process.env.ZG_INDEXER_RPC ?? null,
+  endpoint: ZG_INDEXER_RPC,
+  rpcUrl: ZG_RPC_URL,
 });
