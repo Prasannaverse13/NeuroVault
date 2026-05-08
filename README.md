@@ -262,7 +262,7 @@ Gemini 2.5 Flash powers:
 ## Smart Contract Details
 
 **Contract Name:** `AgentRegistry.sol`
-
+**0G mainnet contract address:** 0x9D06eaEFfD214C2fb14Fad09cBEd469816F01299
 **Deployed on 0G Mainnet:** [View on Explorer](https://chainscan.0g.ai/address/0xb80232b4395e9cb595856f869614d49a58da8b1b)
 
 **Features**
