@@ -123,23 +123,32 @@ Every memory is encrypted before storage. The Privacy Agent runs last in every o
 ## 5) 0G Modules Used
 
 ### 0G Storage
+**Code:** `server/lib/zeroGStorage.ts`
 
-Used to store encrypted memory logs, embeddings metadata, and enterprise knowledge. Active whenever `ZG_PRIVATE_KEY` is set — public mainnet endpoints (`https://evmrpc.0g.ai`, indexer `https://indexer-storage.0g.ai`) are used by default, so no extra RPC env vars are needed. Gracefully degrades to local disk only when `ZG_PRIVATE_KEY` is absent.
+Uploads and retrieves AES-256-GCM encrypted memory objects via the `@0glabs/0g-ts-sdk` Indexer. Active whenever `ZG_PRIVATE_KEY` is set — public mainnet endpoints (`https://evmrpc.0g.ai`, indexer `https://indexer-storage.0g.ai`) are used by default, so no extra RPC env vars are needed. Gracefully degrades to local disk (`.0g-fallback-cache/`) only when `ZG_PRIVATE_KEY` is absent. Key exports: `uploadMemory`, `retrieveMemory`, `storageStatus`.
 
-### 0G Chain (Mainnet)
+### 0G Chain + Smart Contract
+**Code:** `contracts/AgentRegistry.sol`, `server/lib/contract.ts`, `scripts/deploy.ts`
 
-`AgentRegistry.sol` is deployed on **0G Mainnet** (chain ID 16660). Agent IDs are owned by wallet addresses, verifiable on the 0G Mainnet explorer.
+`AgentRegistry.sol` stores agent identities on-chain (owner wallet, name, role, memory size). `server/lib/contract.ts` holds chain config (`CHAINS` map, `activeChain`), the ABI, and helpers `contractStatus`, `fetchOnchainAgent`, `txExplorerUrl`. `scripts/deploy.ts` compiles and deploys via `solc` + `ethers`. Each operator deploys their own instance — no shared contract address is hardcoded.
 
-- Explorer: https://chainscan.0g.ai
-- RPC: https://evmrpc.0g.ai
+- Default chain: **0G Mainnet** (chain ID 16660, RPC `https://evmrpc.0g.ai`, explorer `https://chainscan.0g.ai`)
+- Override: `ZG_CHAIN=0g-galileo` for testnet
 
-### 0G Compute
+### Agent ID (On-chain Registry)
+**Code:** `contracts/AgentRegistry.sol`, `server/lib/contract.ts`, `server/routes.ts` (`POST /api/agents`, `POST /api/agents/:id/onchain`)
 
-Abstraction layer prepared for decentralized inference routing. Set `COMPUTE_PROVIDER=0g` to route workloads to 0G Compute nodes.
+Every agent created via the platform gets a UUID. Once a contract is deployed, agents can be registered on-chain via `AgentRegistry.createAgent()`. The registry maps agent IDs to owner wallets and is queryable by anyone on the 0G Mainnet explorer.
 
-### Privacy / TEE Concepts
+### 0G Compute Network
+**Code:** `server/lib/zeroGCompute.ts`, `server/orchestrator.ts`
 
-AES-256-GCM encrypted memory pipeline with PII scanning before encryption and after every AI inference step. Software TEE architecture — hardware TEE-ready.
+`zeroGCompute.ts` provides the `executeInference` abstraction with three provider modes: `simulated` (default), `0g` (routes to 0G Compute nodes), and `openai`. Set `COMPUTE_PROVIDER=0g` to activate decentralized inference. The orchestrator (`server/orchestrator.ts`) calls this layer for every agent reasoning step.
+
+### Privacy / TEE
+**Code:** `server/lib/encryption.ts`, `server/agents/privacyAgent.ts`, `server/orchestrator.ts`
+
+`encryption.ts` implements AES-256-GCM with a random 32-byte salt and 12-byte IV per record. `privacyAgent.ts` scans text for PII (emails, phone numbers, SSNs, credit cards) using regex patterns and redacts before encryption. The Privacy Agent is always injected **last** in every orchestrator pipeline (`server/orchestrator.ts`) — no response leaves the system without a PII sweep.
 
 ---
 
@@ -214,13 +223,15 @@ Capabilities:
 - `transferOwnership(id, newOwner)` → verifiable transfer
 - `getAgentsByOwner(wallet)` → list all agents for a wallet
 
-**Deployed contract**
+**Deployment**
+
+Each operator deploys their own `AgentRegistry` instance via the Admin panel or `scripts/deploy.ts`. No shared contract address is hardcoded — the deployed address is written to `contracts/deployments.json` per operator and loaded at runtime via `server/lib/contract.ts`.
 
 | Field | Value |
 |---|---|
-| Contract Address | `0x9D06eaEFfD214C2fb14Fad09cBEd469816F01299` |
-| Explorer | https://chainscan.0g.ai/address/0x9D06eaEFfD214C2fb14Fad09cBEd469816F01299 |
 | Chain | 0G Mainnet (Chain ID 16660) |
+| Explorer | https://chainscan.0g.ai |
+| Deploy command | `npx tsx scripts/deploy.ts` |
 
 ---
 
