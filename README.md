@@ -148,10 +148,8 @@ K --> O
 
 ### System Flow
 
-```
-<img width="1787" height="2387" alt="image" src="https://github.com/user-attachments/assets/dd4f5931-63ec-4b15-ac9e-b584df24f42a" />
+<img width="1787" height="2387" alt="image" src="https://github.com/user-attachments/assets/8d2e087d-f36f-4bea-9e1d-5aacd6cc4cc2" />
 
-```
 
 ### Layer Breakdown
 
