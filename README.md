@@ -367,7 +367,3 @@ RainbowKit auto-prompts network addition on connect. **Testnet faucet:** https:/
 **Storage:** 0G Storage SDK, AES-256-GCM, Local Fallback Cache  
 
 ---
-
-## License
-
-MIT © 2026 NeuroVault Enterprise
