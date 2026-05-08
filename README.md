@@ -58,9 +58,95 @@ These memories are stored using 0G Storage and retrieved dynamically during AI r
 
 ---
 
-## Architecture
 
-![NeuroVault Architecture](docs/neurovault_architecture.png)
+# 🏗️ System Architecture
+
+## High-Level Architecture
+
+```eraser
+sequenceDiagram
+    participant User
+    participant Wallet
+    participant Frontend
+    participant Orchestrator
+    participant MemoryAgent
+    participant Gemini
+    participant Storage
+    participant SmartContract
+
+    User->>Wallet: Connect MetaMask
+    Wallet->>Frontend: Wallet Signature
+    Frontend->>SmartContract: Validate Agent Ownership
+    Frontend->>Orchestrator: User Query
+
+    Orchestrator->>MemoryAgent: Retrieve Relevant Memories
+    MemoryAgent->>Storage: Fetch Encrypted Memory
+    Storage-->>MemoryAgent: Memory Payload
+
+    MemoryAgent->>Orchestrator: Ranked Context
+    Orchestrator->>Gemini: Inject Context + Query
+    Gemini-->>Orchestrator: AI Response
+
+    Orchestrator->>Storage: Store New Memory
+    Orchestrator-->>Frontend: Final Response
+    Frontend-->>User: AI Copilot Output
+```
+
+---
+
+## Infrastructure Architecture
+
+```eraser
+flowchart TB
+
+subgraph Frontend
+A[React Frontend]
+B[RainbowKit Auth]
+C[Dashboard]
+D[AI Copilot]
+E[Marketplace]
+end
+
+subgraph Backend
+F[Express API]
+G[OpenClaw-style Orchestrator]
+H[Memory Engine]
+I[Privacy Engine]
+J[GitHub Integration]
+end
+
+subgraph AI
+K[Gemini 2.5 Flash]
+end
+
+subgraph 0G Infrastructure
+L[0G Storage]
+M[0G Chain]
+N[AgentRegistry Contract]
+O[0G Compute Layer]
+end
+
+A --> F
+B --> F
+C --> G
+D --> G
+E --> G
+
+G --> H
+G --> I
+G --> J
+G --> K
+
+H --> L
+I --> L
+
+G --> N
+N --> M
+
+K --> O
+```
+
+---
 
 ### System Flow
 
