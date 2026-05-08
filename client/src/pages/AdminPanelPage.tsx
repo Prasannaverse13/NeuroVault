@@ -223,16 +223,10 @@ export default function AdminPanelPage() {
         {!contract?.configured && (
           <div className="mt-4 rounded-lg border border-violet-400/20 bg-violet-400/5 p-4">
             <p className="text-sm font-medium text-white">Deploy AgentRegistry to 0G Mainnet</p>
-            <p className="mt-2 text-[11px] text-slate-400">
-              Deployer wallet:{" "}
-              <span className="font-mono text-violet-300">
-                {health?.deployWallet ?? "No ZG_PRIVATE_KEY set"}
-              </span>
-            </p>
             <p className="mt-1 text-[11px] text-slate-500">
               {health?.deployWallet
-                ? <>Fund the wallet above with 0G on mainnet, then click Deploy Contract.</>
-                : <>1. Add <span className="font-mono text-slate-400">ZG_PRIVATE_KEY</span> secret &nbsp;2. Fund the wallet with 0G (testnet: <a href="https://faucet.0g.ai" target="_blank" rel="noopener noreferrer" className="text-cyan-400 underline hover:text-cyan-300">faucet.0g.ai</a>) &nbsp;3. Click Deploy Contract</>
+                ? <>Click Deploy Contract to register your AgentRegistry on 0G Mainnet.</>
+                : <>Set a <span className="font-mono text-slate-400">ZG_PRIVATE_KEY</span> secret (funded 0G wallet) then click Deploy Contract.</>
               }
             </p>
             {deployLog && (
