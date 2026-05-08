@@ -63,7 +63,7 @@ These memories are stored using 0G Storage and retrieved dynamically during AI r
 
 ## High-Level Architecture
 
-```eraser
+```mermaid
 sequenceDiagram
     participant User
     participant Wallet
@@ -92,11 +92,9 @@ sequenceDiagram
     Frontend-->>User: AI Copilot Output
 ```
 
----
-
 ## Infrastructure Architecture
 
-```eraser
+```mermaid
 flowchart TB
 
 subgraph Frontend
@@ -119,7 +117,7 @@ subgraph AI
 K[Gemini 2.5 Flash]
 end
 
-subgraph 0G Infrastructure
+subgraph "0G Infrastructure"
 L[0G Storage]
 M[0G Chain]
 N[AgentRegistry Contract]
